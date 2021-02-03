@@ -1,0 +1,14 @@
+# source
+lib
+tests
+index.ts
+yarn-lock.json
+tslint.json
+tsconfig.json
+.prettierrc
+.idea
+
+# github
+.github
+CONTRIBUTING.md
+renovate.json

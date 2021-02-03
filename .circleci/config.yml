@@ -1,0 +1,85 @@
+version: 2
+
+aliases:
+  - &restore-cache
+    restore_cache:
+      key: dependency-cache-{{ checksum "package.json" }}
+  - &install-deps
+    run:
+      name: Install dependencies
+      command: yarn install --frozen-lockfile
+  - &build-packages
+    run:
+      name: Build
+      command: yarn build
+
+jobs:
+  build:
+    working_directory: ~/nestjs-google-pubsub-microservice
+    docker:
+      - image: circleci/node:12
+    steps:
+      - checkout
+      - run:
+          name: Update NPM version
+          command: 'sudo npm install -g npm@latest'
+      - *restore-cache
+      - *install-deps
+      - save_cache:
+          key: dependency-cache-{{ checksum "package.json" }}
+          paths:
+            - ./node_modules
+      - *build-packages
+      - run:
+          name: Unit tests
+          command: yarn test
+
+  integration_tests:
+    working_directory: ~/nestjs-google-pubsub-microservice
+    machine: true
+    environment:
+      PUBSUB_EMULATOR_HOST: localhost:8681
+    steps:
+      - checkout
+      - run:
+          name: Prepare nvm
+          command: |
+            echo 'export NVM_DIR="/opt/circleci/.nvm"' >> $BASH_ENV
+            echo ' [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+      - run:
+          name: Upgrade Node.js
+          command: |
+            nvm install v12
+            node -v
+            nvm alias default v12
+      - run:
+          name: Install Yarn
+          command: npm install yarn -g
+      - run:
+          name: Install Docker Compose
+          command: |
+            curl -L https://github.com/docker/compose/releases/download/1.19.0/docker-compose-`uname -s`-`uname -m` > ~/docker-compose
+            chmod +x ~/docker-compose
+            sudo mv ~/docker-compose /usr/local/bin/docker-compose
+      - *restore-cache
+      - *install-deps
+      - run:
+          name: Prepare
+          command: |
+            docker-compose up -d
+            sleep 10
+      - run:
+          name: List containers
+          command: docker ps
+      - run:
+          name: e2e tests
+          command: yarn test:e2e
+
+workflows:
+  version: 2
+  build-and-test:
+    jobs:
+      - build
+      - integration_tests:
+          requires:
+            - build

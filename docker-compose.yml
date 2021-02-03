@@ -1,0 +1,7 @@
+version: "3"
+services:
+  pubsub:
+    image: messagebird/gcloud-pubsub-emulator:latest
+    ports:
+      - '8681:8681'
+    restart: always

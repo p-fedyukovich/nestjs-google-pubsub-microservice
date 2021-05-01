@@ -1,11 +1,20 @@
 {
   "name": "nestjs-google-pubsub-microservice",
   "version": "1.0.1",
-  "description": "",
+  "description": "NestJS Google Cloud Pub/Sub Microservice Transport",
   "author": "Pavel Fediukovich",
   "license": "MIT",
   "main": "dist/index.js",
   "url": "https://github.com/p-fedyukovich/nestjs-google-pubsub-microservice#readme",
+  "keywords": [
+    "google-pubsub",
+    "pubsub",
+    "nestjs",
+    "microservice",
+    "typescript",
+    "nestjs-microservices",
+    "nestjs-library"
+  ],
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",
     "format": "prettier --write \"**/*.ts\"",

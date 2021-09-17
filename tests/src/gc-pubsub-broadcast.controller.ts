@@ -2,7 +2,7 @@ import { Controller, Get, OnApplicationShutdown } from '@nestjs/common';
 import { MessagePattern, ClientProxy } from '@nestjs/microservices';
 import { Observable } from 'rxjs';
 import { scan, take } from 'rxjs/operators';
-import { GCPubSubClient } from '../../lib/gc-pubsub.client';
+import { GCPubSubClient } from '../../lib';
 
 @Controller()
 export class GCPubSubBroadcastController implements OnApplicationShutdown {
@@ -10,6 +10,8 @@ export class GCPubSubBroadcastController implements OnApplicationShutdown {
 
   constructor() {
     this.client = new GCPubSubClient({
+      topic: 'broadcast',
+      replySubscription: 'broadcast_reply_subscription',
       client: {
         apiEndpoint: 'localhost:8681',
         projectId: 'microservice',

@@ -1,4 +1,4 @@
-import { GCPubSubServer } from '../../lib/gc-pubsub.server';
+import { GCPubSubServer } from '../../lib';
 import { INestApplication } from '@nestjs/common';
 import { GCPubSubBroadcastController } from '../src/gc-pubsub-broadcast.controller';
 import { Test } from '@nestjs/testing';
@@ -18,6 +18,8 @@ describe('GC PubSub transport', () => {
 
     app.connectMicroservice({
       strategy: new GCPubSubServer({
+        topic: 'broadcast',
+        subscription: 'broadcast_subscription_1',
         client: {
           apiEndpoint: 'localhost:8681',
           projectId: 'microservice',
@@ -26,14 +28,15 @@ describe('GC PubSub transport', () => {
     });
     app.connectMicroservice({
       strategy: new GCPubSubServer({
-        subscription: 'default_subscription2',
+        topic: 'broadcast',
+        subscription: 'broadcast_subscription_2',
         client: {
           apiEndpoint: 'localhost:8681',
           projectId: 'microservice',
         },
       }),
     });
-    await app.startAllMicroservicesAsync();
+    await app.startAllMicroservices();
     await app.init();
   });
 

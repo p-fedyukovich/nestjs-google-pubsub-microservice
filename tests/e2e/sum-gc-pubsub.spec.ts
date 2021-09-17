@@ -2,10 +2,10 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { expect } from 'chai';
 import * as request from 'supertest';
-import { GCPubSubServer } from '../../lib/gc-pubsub.server';
+import { GCPubSubServer } from '../../lib';
 import { GCPubSubController } from '../src/gc-pubsub.controller';
 
-describe('GC PubSub transport', function () {
+describe('GC PubSub transport', () => {
   let server;
   let app: INestApplication;
 
@@ -25,7 +25,7 @@ describe('GC PubSub transport', function () {
         },
       }),
     });
-    await app.startAllMicroservicesAsync();
+    await app.startAllMicroservices();
     await app.init();
   });
 
@@ -51,7 +51,7 @@ describe('GC PubSub transport', function () {
       .expect(200, '15');
   });
 
-  it(`/POST (concurrent)`, function () {
+  it(`/POST (concurrent)`, () => {
     return request(server)
       .post('/concurrent')
       .send([

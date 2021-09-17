@@ -8,7 +8,12 @@ import {
 import { PublishOptions } from '@google-cloud/pubsub/build/src/publisher';
 import { SubscriberOptions } from '@google-cloud/pubsub/build/src/subscriber';
 import { Logger } from '@nestjs/common';
-import { ClientProxy, ReadPacket, WritePacket } from '@nestjs/microservices';
+import {
+  ClientProxy,
+  IncomingResponse,
+  ReadPacket,
+  WritePacket,
+} from '@nestjs/microservices';
 import { ERROR_EVENT, MESSAGE_EVENT } from '@nestjs/microservices/constants';
 
 import {
@@ -125,7 +130,7 @@ export class GCPubSubClient extends ClientProxy {
   protected publish(
     partialPacket: ReadPacket,
     callback: (packet: WritePacket) => void,
-  ): Function {
+  ) {
     try {
       const packet = this.assignPacketId(partialPacket);
 
@@ -153,7 +158,7 @@ export class GCPubSubClient extends ClientProxy {
 
     const { err, response, isDisposed, id } = this.deserializer.deserialize(
       rawMessage,
-    );
+    ) as IncomingResponse;
     const callback = this.routingMap.get(id);
     if (!callback) {
       return;
@@ -175,7 +180,7 @@ export class GCPubSubClient extends ClientProxy {
   public async createIfNotExists(create: () => Promise<any>) {
     try {
       await create();
-    } catch (error) {
+    } catch (error: any) {
       if (error.code !== ALREADY_EXISTS) {
         throw error;
       }

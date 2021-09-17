@@ -6,5 +6,5 @@ export const GC_PUBSUB_DEFAULT_REPLY_SUBSCRIPTION =
 export const GC_PUBSUB_DEFAULT_PUBLISHER_CONFIG = {};
 export const GC_PUBSUB_DEFAULT_SUBSCRIBER_CONFIG = {};
 export const GC_PUBSUB_DEFAULT_CLIENT_CONFIG = {};
-export const GC_PUBSUB_DEFAULT_NO_ACK = false;
+export const GC_PUBSUB_DEFAULT_NO_ACK = true;
 export const ALREADY_EXISTS = 6;

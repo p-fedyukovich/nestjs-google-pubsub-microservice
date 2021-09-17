@@ -106,14 +106,14 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     const { data, attributes } = message;
     const rawMessage = JSON.parse(data.toString());
 
-    const packet = this.deserializer.deserialize(rawMessage);
+    const packet = this.deserializer.deserialize(rawMessage) as IncomingRequest;
 
     const pattern = isString(packet.pattern)
       ? packet.pattern
       : JSON.stringify(packet.pattern);
 
     const context = new GCPubSubContext([message, pattern]);
-    const correlationId = (packet as IncomingRequest).id;
+    const correlationId = packet.id;
 
     if (isUndefined(correlationId)) {
       return this.handleEvent(pattern, packet, context);
@@ -153,7 +153,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     Object.assign(message, { id });
 
     const outgoingResponse = this.serializer.serialize(
-      (message as unknown) as OutgoingResponse,
+      message as unknown as OutgoingResponse,
     );
 
     await this.client
@@ -164,7 +164,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   public async createIfNotExists(create: () => Promise<any>) {
     try {
       await create();
-    } catch (error) {
+    } catch (error: any) {
       if (error.code !== ALREADY_EXISTS) {
         throw error;
       }

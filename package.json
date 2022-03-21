@@ -32,7 +32,7 @@
   "devDependencies": {
     "@commitlint/cli": "11.0.0",
     "@commitlint/config-angular": "11.0.0",
-    "@google-cloud/pubsub": "^2.17.0",
+    "@google-cloud/pubsub": "2.19.0",
     "@nestjs/common": "8.0.6",
     "@nestjs/core": "8.0.6",
     "@nestjs/microservices": "8.0.6",

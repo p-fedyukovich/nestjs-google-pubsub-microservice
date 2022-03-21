@@ -33,6 +33,7 @@ import {
   GC_PUBSUB_DEFAULT_TOPIC,
 } from './gc-pubsub.constants';
 import { GCPubSubContext } from './gc-pubsub.context';
+import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
 
 export class GCPubSubServer extends Server implements CustomTransportStrategy {
   protected logger = new Logger(GCPubSubServer.name);
@@ -43,6 +44,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   protected readonly subscriptionName: string;
   protected readonly subscriberConfig: SubscriberOptions;
   protected readonly noAck: boolean;
+  protected readonly replyTopics: Set<string>;
 
   protected client: PubSub | null = null;
   protected readonly topics: Map<string, Topic> = new Map();
@@ -65,6 +67,8 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
       this.options.publisher || GC_PUBSUB_DEFAULT_PUBLISHER_CONFIG;
 
     this.noAck = this.options.noAck || GC_PUBSUB_DEFAULT_NO_ACK;
+
+    this.replyTopics = new Set();
 
     this.initializeSerializer(options);
     this.initializeDeserializer(options);
@@ -98,8 +102,17 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   }
 
   public async close() {
-    this.subscription && (await this.subscription.close());
-    await this.client.close();
+    await closeSubscription(this.subscription);
+
+    await Promise.all(
+      Array.from(this.replyTopics.values()).map((replyTopic) => {
+        return flushTopic(this.client.topic(replyTopic));
+      }),
+    );
+
+    this.replyTopics.clear();
+
+    await closePubSub(this.client);
   }
 
   public async handleMessage(message: Message) {
@@ -155,6 +168,8 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     const outgoingResponse = this.serializer.serialize(
       message as unknown as OutgoingResponse,
     );
+
+    this.replyTopics.add(replyTo);
 
     await this.client
       .topic(replyTo, this.publisherConfig)

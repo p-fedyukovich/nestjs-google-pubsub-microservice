@@ -27,6 +27,7 @@ import {
   GC_PUBSUB_DEFAULT_TOPIC,
 } from './gc-pubsub.constants';
 import { GCPubSubOptions } from './gc-pubsub.interface';
+import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
 
 export class GCPubSubClient extends ClientProxy {
   protected readonly logger = new Logger(GCPubSubClient.name);
@@ -69,8 +70,9 @@ export class GCPubSubClient extends ClientProxy {
   }
 
   public async close(): Promise<void> {
-    this.replySubscription && (await this.replySubscription.close());
-    this.client && (await this.client.close());
+    await flushTopic(this.topic);
+    await closeSubscription(this.replySubscription);
+    await closePubSub(this.client);
     this.client = null;
     this.topic = null;
     this.replySubscription = null;

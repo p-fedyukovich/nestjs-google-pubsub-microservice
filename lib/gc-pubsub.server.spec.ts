@@ -22,19 +22,20 @@ describe('GCPubSubServer', () => {
 
     subscriptionMock = {
       create: sandbox.stub().resolves(),
-      close: sandbox.stub().resolves(),
+      close: sandbox.stub().callsFake((callback) => callback()),
       on: sandbox.stub().returnsThis(),
     };
 
     topicMock = {
       create: sandbox.stub().resolves(),
+      flush: sandbox.stub().callsFake((callback) => callback()),
       publishJSON: sandbox.stub().resolves(),
       subscription: sandbox.stub().returns(subscriptionMock),
     };
 
     pubsub = {
       topic: sandbox.stub().returns(topicMock),
-      close: sandbox.spy(),
+      close: sandbox.stub().callsFake((callback) => callback()),
     };
 
     createClient = sandbox.stub(server, 'createClient').returns(pubsub);

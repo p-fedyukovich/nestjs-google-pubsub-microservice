@@ -63,7 +63,7 @@ export class GCPubSubClient extends ClientProxy {
     this.replySubscriptionName =
       this.options.replySubscription || GC_PUBSUB_DEFAULT_REPLY_SUBSCRIPTION;
 
-    this.noAck = this.options.noAck || GC_PUBSUB_DEFAULT_NO_ACK;
+    this.noAck = this.options.noAck ?? GC_PUBSUB_DEFAULT_NO_ACK;
 
     this.initializeSerializer(options);
     this.initializeDeserializer(options);

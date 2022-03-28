@@ -66,7 +66,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     this.publisherConfig =
       this.options.publisher || GC_PUBSUB_DEFAULT_PUBLISHER_CONFIG;
 
-    this.noAck = this.options.noAck || GC_PUBSUB_DEFAULT_NO_ACK;
+    this.noAck = this.options.noAck ?? GC_PUBSUB_DEFAULT_NO_ACK;
 
     this.replyTopics = new Set();
 

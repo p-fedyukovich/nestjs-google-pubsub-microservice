@@ -29,7 +29,7 @@ describe('GCPubSubServer', () => {
     topicMock = {
       create: sandbox.stub().resolves(),
       flush: sandbox.stub().callsFake((callback) => callback()),
-      publishJSON: sandbox.stub().resolves(),
+      publishMessage: sandbox.stub().resolves(),
       subscription: sandbox.stub().returns(subscriptionMock),
     };
 
@@ -106,10 +106,12 @@ describe('GCPubSubServer', () => {
         data: Buffer.from(JSON.stringify(msg)),
       });
       expect(
-        topicMock.publishJSON.calledWith({
-          id: msg.id,
-          status: 'error',
-          err: NO_MESSAGE_HANDLER,
+        topicMock.publishMessage.calledWith({
+          json: {
+            id: msg.id,
+            status: 'error',
+            err: NO_MESSAGE_HANDLER,
+          },
         }),
       ).to.be.true;
     });
@@ -146,7 +148,9 @@ describe('GCPubSubServer', () => {
 
       await server.sendMessage(message, replyTo, correlationId);
       expect(
-        topicMock.publishJSON.calledWith({ ...message, id: correlationId }),
+        topicMock.publishMessage.calledWith({
+          json: { ...message, id: correlationId },
+        }),
       ).to.be.true;
     });
   });

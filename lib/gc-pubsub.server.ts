@@ -173,7 +173,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
     await this.client
       .topic(replyTo, this.publisherConfig)
-      .publishJSON(outgoingResponse);
+      .publishMessage({ json: outgoingResponse });
   }
 
   public async createIfNotExists(create: () => Promise<any>) {

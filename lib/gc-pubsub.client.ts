@@ -125,7 +125,7 @@ export class GCPubSubClient extends ClientProxy {
     });
 
     if (this.topic) {
-      await this.topic.publishJSON(serializedPacket);
+      await this.topic.publishMessage({ json: serializedPacket });
     }
   }
 
@@ -141,8 +141,9 @@ export class GCPubSubClient extends ClientProxy {
 
       if (this.topic) {
         this.topic
-          .publishJSON(serializedPacket, {
-            replyTo: this.replyTopicName,
+          .publishMessage({
+            json: serializedPacket,
+            attributes: { replyTo: this.replyTopicName },
           })
           .catch((err) => callback({ err }));
       } else {

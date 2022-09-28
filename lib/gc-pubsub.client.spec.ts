@@ -24,7 +24,7 @@ describe('GCPubSubClient', () => {
     topicMock = {
       create: sandbox.stub().resolves(),
       flush: sandbox.stub().callsFake((callback) => callback()),
-      publishJSON: sandbox.stub().resolves(),
+      publishMessage: sandbox.stub().resolves(),
       subscription: sandbox.stub().returns(subscriptionMock),
     };
 
@@ -103,8 +103,8 @@ describe('GCPubSubClient', () => {
     });
     it('should send message to a proper topic', () => {
       client['publish'](msg, () => {
-        expect(topicMock.publishJSON.called).to.be.true;
-        expect(topicMock.publishJSON.getCall(0).args[0]).to.be.eql(msg);
+        expect(topicMock.publishMessage.called).to.be.true;
+        expect(topicMock.publishMessage.getCall(0).args[0].json).to.be.eql(msg);
       });
     });
     describe('on dispose', () => {
@@ -202,10 +202,10 @@ describe('GCPubSubClient', () => {
     });
     it('should publish packet', async () => {
       await client['dispatchEvent'](msg);
-      expect(topicMock.publishJSON.called).to.be.true;
+      expect(topicMock.publishMessage.called).to.be.true;
     });
     it('should throw error', async () => {
-      topicMock.publishJSON.callsFake((a: any, b: any, c: any, d: any) =>
+      topicMock.publishMessage.callsFake((a: any, b: any, c: any, d: any) =>
         d(new Error()),
       );
       client['dispatchEvent'](msg).catch((err) =>

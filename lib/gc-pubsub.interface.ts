@@ -10,6 +10,7 @@ export interface GCPubSubOptions {
   subscription?: string;
   replySubscription?: string;
   noAck?: boolean;
+  init?: boolean
   publisher?: PublishOptions;
   subscriber?: SubscriberOptions;
   serializer?: Serializer;

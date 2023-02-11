@@ -3,7 +3,6 @@ import {
   Message,
   PubSub,
   Subscription,
-  Topic,
 } from '@google-cloud/pubsub';
 import { PublishOptions } from '@google-cloud/pubsub/build/src/publisher';
 import { SubscriberOptions } from '@google-cloud/pubsub/build/src/subscriber';
@@ -26,6 +25,7 @@ import { GCPubSubOptions } from './gc-pubsub.interface';
 import {
   ALREADY_EXISTS,
   GC_PUBSUB_DEFAULT_CLIENT_CONFIG,
+  GC_PUBSUB_DEFAULT_INIT,
   GC_PUBSUB_DEFAULT_NO_ACK,
   GC_PUBSUB_DEFAULT_PUBLISHER_CONFIG,
   GC_PUBSUB_DEFAULT_SUBSCRIBER_CONFIG,
@@ -45,9 +45,9 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   protected readonly subscriberConfig: SubscriberOptions;
   protected readonly noAck: boolean;
   protected readonly replyTopics: Set<string>;
+  protected readonly init: boolean;
 
   protected client: PubSub | null = null;
-  protected readonly topics: Map<string, Topic> = new Map();
   protected subscription: Subscription | null = null;
 
   constructor(protected readonly options: GCPubSubOptions) {
@@ -67,6 +67,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
       this.options.publisher || GC_PUBSUB_DEFAULT_PUBLISHER_CONFIG;
 
     this.noAck = this.options.noAck ?? GC_PUBSUB_DEFAULT_NO_ACK;
+    this.init = this.options.init ?? GC_PUBSUB_DEFAULT_INIT;
 
     this.replyTopics = new Set();
 
@@ -78,16 +79,34 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     this.client = this.createClient();
     const topic = this.client.topic(this.topicName);
 
-    await this.createIfNotExists(topic.create.bind(topic));
+    if (this.init) {
+      await this.createIfNotExists(topic.create.bind(topic));
+    } else {
+      const [exists] = await topic.exists();
+      if (!exists) {
+        const message = `PubSub server is not started: topic ${this.topicName} does not exist`;
+        this.logger.error(message);
+        throw new Error(message);
+      }
+    }
 
     this.subscription = topic.subscription(
       this.subscriptionName,
       this.subscriberConfig,
     );
 
-    await this.createIfNotExists(
-      this.subscription.create.bind(this.subscription),
-    );
+    if (this.init) {
+      await this.createIfNotExists(
+        this.subscription.create.bind(this.subscription),
+      );
+    } else {
+      const [exists] = await this.subscription.exists();
+      if (!exists) {
+        const message = `PubSub server is not started: subscription ${this.subscriptionName} does not exist`;
+        this.logger.error(message);
+        throw new Error(message);
+      }
+    }
 
     this.subscription
       .on(MESSAGE_EVENT, async (message: Message) => {

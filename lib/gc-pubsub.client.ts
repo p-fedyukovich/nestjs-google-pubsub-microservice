@@ -19,10 +19,9 @@ import { ERROR_EVENT, MESSAGE_EVENT } from '@nestjs/microservices/constants';
 import {
   ALREADY_EXISTS,
   GC_PUBSUB_DEFAULT_CLIENT_CONFIG,
+  GC_PUBSUB_DEFAULT_INIT,
   GC_PUBSUB_DEFAULT_NO_ACK,
   GC_PUBSUB_DEFAULT_PUBLISHER_CONFIG,
-  GC_PUBSUB_DEFAULT_REPLY_SUBSCRIPTION,
-  GC_PUBSUB_DEFAULT_REPLY_TOPIC,
   GC_PUBSUB_DEFAULT_SUBSCRIBER_CONFIG,
   GC_PUBSUB_DEFAULT_TOPIC,
 } from './gc-pubsub.constants';
@@ -34,15 +33,16 @@ export class GCPubSubClient extends ClientProxy {
 
   protected readonly topicName: string;
   protected readonly publisherConfig: PublishOptions;
-  protected readonly replyTopicName: string;
+  protected readonly replyTopicName?: string;
+  protected readonly replySubscriptionName?: string;
   protected readonly clientConfig: ClientConfig;
-  protected readonly replySubscriptionName: string;
   protected readonly subscriberConfig: SubscriberOptions;
   protected readonly noAck: boolean;
 
   protected client: PubSub | null = null;
   protected replySubscription: Subscription | null = null;
   protected topic: Topic | null = null;
+  protected init: boolean;
 
   constructor(protected readonly options: GCPubSubOptions) {
     super();
@@ -57,13 +57,12 @@ export class GCPubSubClient extends ClientProxy {
     this.publisherConfig =
       this.options.publisher || GC_PUBSUB_DEFAULT_PUBLISHER_CONFIG;
 
-    this.replyTopicName =
-      this.options.replyTopic || GC_PUBSUB_DEFAULT_REPLY_TOPIC;
+    this.replyTopicName = this.options.replyTopic;
 
-    this.replySubscriptionName =
-      this.options.replySubscription || GC_PUBSUB_DEFAULT_REPLY_SUBSCRIPTION;
+    this.replySubscriptionName = this.options.replySubscription;
 
     this.noAck = this.options.noAck ?? GC_PUBSUB_DEFAULT_NO_ACK;
+    this.init = this.options.init ?? GC_PUBSUB_DEFAULT_INIT;
 
     this.initializeSerializer(options);
     this.initializeDeserializer(options);
@@ -87,27 +86,55 @@ export class GCPubSubClient extends ClientProxy {
 
     this.topic = this.client.topic(this.topicName, this.publisherConfig);
 
-    const replyTopic = this.client.topic(this.replyTopicName);
+    const [topicExists] = await this.topic.exists();
 
-    await this.createIfNotExists(replyTopic.create.bind(replyTopic));
+    if (!topicExists) {
+      const message = `PubSub client is not connected: topic ${this.topicName} does not exist`;
+      this.logger.error(message);
+      throw new Error(message);
+    }
 
-    this.replySubscription = replyTopic.subscription(
-      this.replySubscriptionName,
-      this.subscriberConfig,
-    );
+    if (this.replyTopicName && this.replySubscriptionName) {
+      const replyTopic = this.client.topic(this.replyTopicName);
 
-    await this.createIfNotExists(
-      this.replySubscription.create.bind(this.replySubscription),
-    );
-
-    this.replySubscription
-      .on(MESSAGE_EVENT, async (message: Message) => {
-        await this.handleResponse(message.data);
-        if (this.noAck) {
-          message.ack();
+      if (this.init) {
+        await this.createIfNotExists(replyTopic.create.bind(replyTopic));
+      } else {
+        const [exists] = await replyTopic.exists();
+        if (!exists) {
+          const message = `PubSub client is not connected: topic ${this.replyTopicName} does not exist`;
+          this.logger.error(message);
+          throw new Error(message);
         }
-      })
-      .on(ERROR_EVENT, (err: any) => this.logger.error(err));
+      }
+
+      this.replySubscription = replyTopic.subscription(
+        this.replySubscriptionName,
+        this.subscriberConfig,
+      );
+
+      if (this.init) {
+        await this.createIfNotExists(
+          this.replySubscription.create.bind(this.replySubscription),
+        );
+      } else {
+        const [exists] = await this.replySubscription.exists();
+        if (!exists) {
+          const message = `PubSub client is not connected: subscription ${this.replySubscription} does not exist`;
+          this.logger.error(message);
+          throw new Error(message);
+        }
+      }
+
+      this.replySubscription
+        .on(MESSAGE_EVENT, async (message: Message) => {
+          await this.handleResponse(message.data);
+          if (this.noAck) {
+            message.ack();
+          }
+        })
+        .on(ERROR_EVENT, (err: any) => this.logger.error(err));
+    }
 
     return this.client;
   }

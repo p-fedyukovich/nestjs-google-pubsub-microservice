@@ -27,6 +27,8 @@ export class GCPubSubController implements OnApplicationShutdown {
         apiEndpoint: 'localhost:8681',
         projectId: 'microservice',
       },
+      replyTopic: 'default_reply_topic',
+      replySubscription: 'default_reply_subscription',
     });
   }
 

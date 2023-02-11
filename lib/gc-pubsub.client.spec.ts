@@ -13,7 +13,10 @@ describe('GCPubSubClient', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    client = new GCPubSubClient({});
+    client = new GCPubSubClient({
+      replyTopic: 'replyTopic',
+      replySubscription: 'replySubcription',
+    });
 
     subscriptionMock = {
       create: sandbox.stub().resolves(),
@@ -25,6 +28,7 @@ describe('GCPubSubClient', () => {
       create: sandbox.stub().resolves(),
       flush: sandbox.stub().callsFake((callback) => callback()),
       publishMessage: sandbox.stub().resolves(),
+      exists: sandbox.stub().resolves([true]),
       subscription: sandbox.stub().returns(subscriptionMock),
     };
 
@@ -52,6 +56,9 @@ describe('GCPubSubClient', () => {
       });
       it('should call "client.topic" once', async () => {
         expect(pubsub.topic.called).to.be.true;
+      });
+      it('should call "topic.exists" once', async () => {
+        expect(topicMock.exists.called).to.be.true;
       });
       it('should call "topic.create" once', async () => {
         expect(topicMock.create.called).to.be.true;

@@ -24,6 +24,7 @@ import {
   GC_PUBSUB_DEFAULT_PUBLISHER_CONFIG,
   GC_PUBSUB_DEFAULT_SUBSCRIBER_CONFIG,
   GC_PUBSUB_DEFAULT_TOPIC,
+  GC_PUBSUB_DEFAULT_CHECK_EXISTENCE,
 } from './gc-pubsub.constants';
 import { GCPubSubOptions } from './gc-pubsub.interface';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
@@ -43,6 +44,7 @@ export class GCPubSubClient extends ClientProxy {
   protected replySubscription: Subscription | null = null;
   protected topic: Topic | null = null;
   protected init: boolean;
+  protected readonly checkExistence: boolean;
 
   constructor(protected readonly options: GCPubSubOptions) {
     super();
@@ -63,6 +65,8 @@ export class GCPubSubClient extends ClientProxy {
 
     this.noAck = this.options.noAck ?? GC_PUBSUB_DEFAULT_NO_ACK;
     this.init = this.options.init ?? GC_PUBSUB_DEFAULT_INIT;
+    this.checkExistence =
+      this.options.checkExistence ?? GC_PUBSUB_DEFAULT_CHECK_EXISTENCE;
 
     this.initializeSerializer(options);
     this.initializeDeserializer(options);
@@ -86,12 +90,14 @@ export class GCPubSubClient extends ClientProxy {
 
     this.topic = this.client.topic(this.topicName, this.publisherConfig);
 
-    const [topicExists] = await this.topic.exists();
+    if (this.checkExistence) {
+      const [topicExists] = await this.topic.exists();
 
-    if (!topicExists) {
-      const message = `PubSub client is not connected: topic ${this.topicName} does not exist`;
-      this.logger.error(message);
-      throw new Error(message);
+      if (!topicExists) {
+        const message = `PubSub client is not connected: topic ${this.topicName} does not exist`;
+        this.logger.error(message);
+        throw new Error(message);
+      }
     }
 
     if (this.replyTopicName && this.replySubscriptionName) {
@@ -99,7 +105,7 @@ export class GCPubSubClient extends ClientProxy {
 
       if (this.init) {
         await this.createIfNotExists(replyTopic.create.bind(replyTopic));
-      } else {
+      } else if (this.checkExistence) {
         const [exists] = await replyTopic.exists();
         if (!exists) {
           const message = `PubSub client is not connected: topic ${this.replyTopicName} does not exist`;
@@ -117,7 +123,7 @@ export class GCPubSubClient extends ClientProxy {
         await this.createIfNotExists(
           this.replySubscription.create.bind(this.replySubscription),
         );
-      } else {
+      } else if (this.checkExistence) {
         const [exists] = await this.replySubscription.exists();
         if (!exists) {
           const message = `PubSub client is not connected: subscription ${this.replySubscription} does not exist`;

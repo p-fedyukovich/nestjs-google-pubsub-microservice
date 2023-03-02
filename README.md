@@ -66,6 +66,10 @@ The `options` property is specific to the chosen transporter. The <strong>GCloud
     <td>If <code>false</code>, topics and subscriptions will not be created, only validated</td>
   </tr>
   <tr>
+    <td><code>checkExistence</code></td>
+    <td>If <code>false</code>, topics and subscriptions will not be checked, only used. This only applies when <code>init</code> is <code>false</code></td>
+  </tr>
+  <tr>
     <td><code>client</code></td>
     <td>Additional client options (read more <a href="https://googleapis.dev/nodejs/pubsub/latest/global.html#ClientConfig" rel="nofollow" target="_blank">here</a>)</td>
   </tr>

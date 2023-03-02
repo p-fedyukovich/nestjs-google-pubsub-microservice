@@ -22,6 +22,7 @@ describe('GCPubSubClient', () => {
       create: sandbox.stub().resolves(),
       close: sandbox.stub().callsFake((callback) => callback()),
       on: sandbox.stub().returnsThis(),
+      exists: sandbox.stub().resolves([true]),
     };
 
     topicMock = {
@@ -45,32 +46,84 @@ describe('GCPubSubClient', () => {
 
   describe('connect', () => {
     describe('when is not connected', () => {
-      beforeEach(async () => {
-        try {
-          client['client'] = null;
-          await client.connect();
-        } catch {}
+      describe('when check existence is true', () => {
+        beforeEach(async () => {
+          try {
+            client['client'] = null;
+            await client.connect();
+          } catch {}
+        });
+        it('should call "createClient" once', async () => {
+          expect(createClient.called).to.be.true;
+        });
+        it('should call "client.topic" once', async () => {
+          expect(pubsub.topic.called).to.be.true;
+        });
+        it('should call "topic.exists" once', async () => {
+          expect(topicMock.exists.called).to.be.true;
+        });
+        it('should call "topic.create" once', async () => {
+          expect(topicMock.create.called).to.be.true;
+        });
+        it('should call "topic.subscription" once', async () => {
+          expect(topicMock.subscription.called).to.be.true;
+        });
+        it('should call "subscription.create" once', async () => {
+          expect(subscriptionMock.create.called).to.be.true;
+        });
+        it('should call "subscription.on" twice', async () => {
+          expect(subscriptionMock.on.callCount).to.eq(2);
+        });
       });
-      it('should call "createClient" once', async () => {
-        expect(createClient.called).to.be.true;
-      });
-      it('should call "client.topic" once', async () => {
-        expect(pubsub.topic.called).to.be.true;
-      });
-      it('should call "topic.exists" once', async () => {
-        expect(topicMock.exists.called).to.be.true;
-      });
-      it('should call "topic.create" once', async () => {
-        expect(topicMock.create.called).to.be.true;
-      });
-      it('should call "topic.subscription" once', async () => {
-        expect(topicMock.subscription.called).to.be.true;
-      });
-      it('should call "subscription.create" once', async () => {
-        expect(subscriptionMock.create.called).to.be.true;
-      });
-      it('should call "subscription.on" twice', async () => {
-        expect(subscriptionMock.on.callCount).to.eq(2);
+
+      describe('when check existence is false', () => {
+        // TODO: Improve this tests by making the client creation
+        // not a global-scoped process located at the first descriptor
+        beforeEach(async () => {
+          client = new GCPubSubClient({
+            replyTopic: 'replyTopic',
+            replySubscription: 'replySubscription',
+            init: false,
+            checkExistence: false,
+          });
+
+          createClient = sandbox
+            .stub(client, 'createClient')
+            .callsFake(() => pubsub);
+
+          try {
+            client['client'] = null;
+            await client.connect();
+          } catch {}
+        });
+
+        it('should call "createClient" once', () => {
+          expect(createClient.called).to.be.true;
+        });
+
+        it('should call "client.topic" once', () => {
+          expect(pubsub.topic.called).to.be.true;
+        });
+
+        it('should not call "topic.exists" once', () => {
+          expect(topicMock.exists.called).to.be.false;
+        });
+
+        it('should not call "topic.create" once', () => {
+          expect(topicMock.create.called).to.be.false;
+        });
+
+        it('should call "topic.subscription" once', () => {
+          expect(topicMock.subscription.called).to.be.true;
+        });
+
+        it('should not call "subscription.exists" once', () => {
+          expect(subscriptionMock.exists.called).to.be.false;
+        });
+
+        it('should call "subscription.on" twice', () => {
+          expect(subscriptionMock.on.callCount).to.eq(2);
+        });
       });
     });
 

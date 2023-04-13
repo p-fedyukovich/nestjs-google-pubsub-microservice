@@ -31,6 +31,7 @@ import {
   GC_PUBSUB_DEFAULT_SUBSCRIBER_CONFIG,
   GC_PUBSUB_DEFAULT_SUBSCRIPTION,
   GC_PUBSUB_DEFAULT_TOPIC,
+  GC_PUBSUB_DEFAULT_CHECK_EXISTENCE,
 } from './gc-pubsub.constants';
 import { GCPubSubContext } from './gc-pubsub.context';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
@@ -46,6 +47,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   protected readonly noAck: boolean;
   protected readonly replyTopics: Set<string>;
   protected readonly init: boolean;
+  protected readonly checkExistence: boolean;
 
   protected client: PubSub | null = null;
   protected subscription: Subscription | null = null;
@@ -68,6 +70,8 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
     this.noAck = this.options.noAck ?? GC_PUBSUB_DEFAULT_NO_ACK;
     this.init = this.options.init ?? GC_PUBSUB_DEFAULT_INIT;
+    this.checkExistence =
+      this.options.checkExistence ?? GC_PUBSUB_DEFAULT_CHECK_EXISTENCE;
 
     this.replyTopics = new Set();
 
@@ -81,7 +85,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
     if (this.init) {
       await this.createIfNotExists(topic.create.bind(topic));
-    } else {
+    } else if (this.checkExistence) {
       const [exists] = await topic.exists();
       if (!exists) {
         const message = `PubSub server is not started: topic ${this.topicName} does not exist`;
@@ -99,7 +103,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
       await this.createIfNotExists(
         this.subscription.create.bind(this.subscription),
       );
-    } else {
+    } else if (this.checkExistence) {
       const [exists] = await this.subscription.exists();
       if (!exists) {
         const message = `PubSub server is not started: subscription ${this.subscriptionName} does not exist`;

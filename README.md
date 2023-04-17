@@ -70,6 +70,10 @@ The `options` property is specific to the chosen transporter. The <strong>GCloud
     <td>If <code>false</code>, topics and subscriptions will not be checked, only used. This only applies when <code>init</code> is <code>false</code></td>
   </tr>
   <tr>
+    <td><code>useAttributes</code></td>
+    <td>Only applicable for client. If <code>true</code>, <code>pattern</code> and <code>correlationId</code> will be sent via message attributes. This is useful if message consumer is not NestJs microservice or you have message filtering on subscription</td>
+  </tr>
+  <tr>
     <td><code>client</code></td>
     <td>Additional client options (read more <a href="https://googleapis.dev/nodejs/pubsub/latest/global.html#ClientConfig" rel="nofollow" target="_blank">here</a>)</td>
   </tr>

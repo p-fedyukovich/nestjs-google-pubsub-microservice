@@ -24,6 +24,7 @@ import {
   GC_PUBSUB_DEFAULT_PUBLISHER_CONFIG,
   GC_PUBSUB_DEFAULT_SUBSCRIBER_CONFIG,
   GC_PUBSUB_DEFAULT_TOPIC,
+  GC_PUBSUB_DEFAULT_USE_ATTRIBUTES,
   GC_PUBSUB_DEFAULT_CHECK_EXISTENCE,
 } from './gc-pubsub.constants';
 import { GCPubSubOptions } from './gc-pubsub.interface';
@@ -39,6 +40,7 @@ export class GCPubSubClient extends ClientProxy {
   protected readonly clientConfig: ClientConfig;
   protected readonly subscriberConfig: SubscriberOptions;
   protected readonly noAck: boolean;
+  protected readonly useAttributes: boolean;
 
   protected client: PubSub | null = null;
   protected replySubscription: Subscription | null = null;
@@ -65,6 +67,8 @@ export class GCPubSubClient extends ClientProxy {
 
     this.noAck = this.options.noAck ?? GC_PUBSUB_DEFAULT_NO_ACK;
     this.init = this.options.init ?? GC_PUBSUB_DEFAULT_INIT;
+    this.useAttributes =
+      this.options.useAttributes ?? GC_PUBSUB_DEFAULT_USE_ATTRIBUTES;
     this.checkExistence =
       this.options.checkExistence ?? GC_PUBSUB_DEFAULT_CHECK_EXISTENCE;
 
@@ -134,9 +138,19 @@ export class GCPubSubClient extends ClientProxy {
 
       this.replySubscription
         .on(MESSAGE_EVENT, async (message: Message) => {
-          await this.handleResponse(message.data);
-          if (this.noAck) {
-            message.ack();
+          try {
+            const isHandled = await this.handleResponse(message);
+
+            if (!isHandled) {
+              message.nack();
+            } else if (this.noAck) {
+              message.ack();
+            }
+          } catch (error) {
+            this.logger.error(error);
+            if (this.noAck) {
+              message.nack();
+            }
           }
         })
         .on(ERROR_EVENT, (err: any) => this.logger.error(err));
@@ -152,12 +166,23 @@ export class GCPubSubClient extends ClientProxy {
   protected async dispatchEvent(packet: ReadPacket): Promise<any> {
     const pattern = this.normalizePattern(packet.pattern);
 
+    if (!this.topic) {
+      return;
+    }
+
     const serializedPacket = this.serializer.serialize({
       ...packet,
       pattern,
     });
 
-    if (this.topic) {
+    if (this.useAttributes) {
+      await this.topic.publishMessage({
+        json: serializedPacket.data,
+        attributes: {
+          pattern: serializedPacket.pattern,
+        },
+      });
+    } else {
       await this.topic.publishMessage({ json: serializedPacket });
     }
   }
@@ -173,12 +198,25 @@ export class GCPubSubClient extends ClientProxy {
       this.routingMap.set(packet.id, callback);
 
       if (this.topic) {
-        this.topic
-          .publishMessage({
-            json: serializedPacket,
-            attributes: { replyTo: this.replyTopicName },
-          })
-          .catch((err) => callback({ err }));
+        if (this.useAttributes) {
+          this.topic
+            .publishMessage({
+              json: serializedPacket.data,
+              attributes: {
+                replyTo: this.replyTopicName,
+                pattern: serializedPacket.pattern,
+                id: serializedPacket.id,
+              },
+            })
+            .catch((err) => callback({ err }));
+        } else {
+          this.topic
+            .publishMessage({
+              json: serializedPacket,
+              attributes: { replyTo: this.replyTopicName },
+            })
+            .catch((err) => callback({ err }));
+        }
       } else {
         callback({ err: new Error('Topic is not created') });
       }
@@ -189,28 +227,37 @@ export class GCPubSubClient extends ClientProxy {
     }
   }
 
-  public async handleResponse(data: Buffer) {
-    const rawMessage = JSON.parse(data.toString());
+  public async handleResponse(message: {
+    data: Buffer;
+    attributes: Record<string, string>;
+  }): Promise<boolean> {
+    const rawMessage = JSON.parse(message.data.toString());
 
     const { err, response, isDisposed, id } = this.deserializer.deserialize(
       rawMessage,
     ) as IncomingResponse;
-    const callback = this.routingMap.get(id);
+
+    const correlationId = id || message.attributes.id;
+
+    const callback = this.routingMap.get(correlationId);
     if (!callback) {
-      return;
+      return false;
     }
 
     if (err || isDisposed) {
-      return callback({
+      callback({
         err,
         response,
         isDisposed,
       });
+    } else {
+      callback({
+        err,
+        response,
+      });
     }
-    callback({
-      err,
-      response,
-    });
+
+    return true;
   }
 
   public async createIfNotExists(create: () => Promise<any>) {

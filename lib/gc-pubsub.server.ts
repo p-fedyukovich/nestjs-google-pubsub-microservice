@@ -154,7 +154,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
     let correlationId: string;
 
-    if (attributes.useAttibutes === 'true') {
+    if (attributes.useAttributes === 'true') {
       correlationId = attributes.id;
     } else {
       correlationId = packet.id;

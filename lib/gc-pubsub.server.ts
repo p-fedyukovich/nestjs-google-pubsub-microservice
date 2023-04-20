@@ -151,7 +151,14 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
       : JSON.stringify(packet.pattern);
 
     const context = new GCPubSubContext([message, pattern]);
-    const correlationId = packet.id || attributes.id;
+
+    let correlationId: string;
+
+    if (attributes.useAttibutes === 'true') {
+      correlationId = attributes.id;
+    } else {
+      correlationId = packet.id;
+    }
 
     if (isUndefined(correlationId)) {
       return this.handleEvent(pattern, packet, context);

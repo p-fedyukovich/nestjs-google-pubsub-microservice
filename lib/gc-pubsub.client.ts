@@ -180,6 +180,7 @@ export class GCPubSubClient extends ClientProxy {
         json: serializedPacket.data,
         attributes: {
           pattern: serializedPacket.pattern,
+          useAttributes: 'true',
         },
       });
     } else {
@@ -206,6 +207,7 @@ export class GCPubSubClient extends ClientProxy {
                 replyTo: this.replyTopicName,
                 pattern: serializedPacket.pattern,
                 id: serializedPacket.id,
+                useAttributes: 'true',
               },
             })
             .catch((err) => callback({ err }));

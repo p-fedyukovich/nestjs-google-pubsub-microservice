@@ -88,11 +88,14 @@ export class GCPubSubController implements OnApplicationShutdown {
 
   @Post('notify')
   async sendNotification(): Promise<any> {
-    return this.client.emit<number>('notification', true);
+    return this.client.emit<{ notification: boolean; id: string }>(
+      'notification',
+      { notification: true, id: 'id' },
+    );
   }
 
   @EventPattern('notification')
-  eventHandler(data: boolean) {
-    GCPubSubController.IS_NOTIFIED = data;
+  eventHandler(data: { notification: boolean; id: string }) {
+    GCPubSubController.IS_NOTIFIED = data.notification;
   }
 }

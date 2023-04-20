@@ -142,23 +142,23 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     const { data, attributes } = message;
     const rawMessage = JSON.parse(data.toString());
 
-    const packet = this.deserializer.deserialize(rawMessage, {
-      pattern: attributes.pattern,
-    }) as IncomingRequest;
+    let packet;
+    if (attributes.useAttributes === 'true') {
+      packet = this.deserializer.deserialize({
+        data: rawMessage,
+        id: attributes.id,
+        pattern: attributes.pattern,
+      }) as IncomingRequest;
+    } else {
+      packet = this.deserializer.deserialize(rawMessage) as IncomingRequest;
+    }
 
     const pattern = isString(packet.pattern)
       ? packet.pattern
       : JSON.stringify(packet.pattern);
+    const correlationId = packet.id;
 
     const context = new GCPubSubContext([message, pattern]);
-
-    let correlationId: string;
-
-    if (attributes.useAttributes === 'true') {
-      correlationId = attributes.id;
-    } else {
-      correlationId = packet.id;
-    }
 
     if (isUndefined(correlationId)) {
       return this.handleEvent(pattern, packet, context);

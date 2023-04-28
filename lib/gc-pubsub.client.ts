@@ -180,7 +180,6 @@ export class GCPubSubClient extends ClientProxy {
         json: serializedPacket.data,
         attributes: {
           pattern: serializedPacket.pattern,
-          useAttributes: 'true',
         },
       });
     } else {
@@ -207,7 +206,6 @@ export class GCPubSubClient extends ClientProxy {
                 replyTo: this.replyTopicName,
                 pattern: serializedPacket.pattern,
                 id: serializedPacket.id,
-                useAttributes: 'true',
               },
             })
             .catch((err) => callback({ err }));
@@ -239,7 +237,7 @@ export class GCPubSubClient extends ClientProxy {
       rawMessage,
     ) as IncomingResponse;
 
-    const correlationId = id || message.attributes.id;
+    const correlationId = message.attributes.id || id;
 
     const callback = this.routingMap.get(correlationId);
     if (!callback) {

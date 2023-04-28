@@ -209,7 +209,6 @@ describe('GCPubSubClient', () => {
         expect(message.json).to.be.eql(msg.data);
         expect(message.attributes.pattern).to.be.eql(pattern);
         expect(message.attributes.id).to.be.not.empty;
-        expect(message.attributes.useAttributes).to.be.eql('true');
       });
     });
   });
@@ -356,7 +355,6 @@ describe('GCPubSubClient', () => {
         const message = topicMock.publishMessage.getCall(0).args[0];
         expect(message.json).to.be.eql(msg.data);
         expect(message.attributes.pattern).to.be.eql(msg.pattern);
-        expect(message.attributes.useAttributes).to.be.eql('true');
       });
 
       it('should throw error', async () => {

@@ -143,7 +143,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     const rawMessage = JSON.parse(data.toString());
 
     let packet;
-    if (attributes.useAttributes === 'true') {
+    if (attributes.pattern) {
       packet = this.deserializer.deserialize({
         data: rawMessage,
         id: attributes.id,
@@ -167,6 +167,10 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     const handler = this.getHandlerByPattern(pattern);
 
     if (!handler) {
+      if (!attributes.replyTo) {
+        return;
+      }
+
       const status = 'error';
       const noHandlerPacket = {
         id: correlationId,

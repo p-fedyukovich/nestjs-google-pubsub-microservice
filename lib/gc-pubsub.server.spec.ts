@@ -122,7 +122,9 @@ describe('GCPubSubServer', () => {
         ackId: 'id',
         // @ts-ignore
         publishTime: new Date(),
-        attributes: {},
+        attributes: {
+          replyTo: 'replyTo',
+        },
         id: 'id',
         received: 0,
         deliveryAttempt: 1,

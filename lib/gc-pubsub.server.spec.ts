@@ -5,6 +5,7 @@ import { NO_MESSAGE_HANDLER } from '@nestjs/microservices/constants';
 import { BaseRpcContext } from '@nestjs/microservices/ctx-host/base-rpc.context';
 import { ALREADY_EXISTS } from './gc-pubsub.constants';
 import { GCPubSubOptions } from './gc-pubsub.interface';
+import { CreateSubscriptionOptions, Message } from '@google-cloud/pubsub';
 
 describe('GCPubSubServer', () => {
   let server: GCPubSubServer;
@@ -50,6 +51,68 @@ describe('GCPubSubServer', () => {
 
       it('should call "subscription.on" twice', async () => {
         expect(subscriptionMock.on.callCount).to.eq(2);
+      });
+    });
+
+    describe('when createSubscriptionOptions is provided', () => {
+      const mockCreateSubscriptionOptions: CreateSubscriptionOptions = {
+        messageRetentionDuration: {
+          seconds: 604800, // 7 days
+        },
+        pushEndpoint: 'https://example.com/push',
+        oidcToken: {
+          serviceAccountEmail: 'example@example.com',
+          audience: 'https://example.com',
+        },
+        topic: 'projects/my-project/topics/my-topic',
+        pushConfig: {
+          pushEndpoint: 'https://example.com/push',
+        },
+        ackDeadlineSeconds: 60,
+        retainAckedMessages: true,
+        labels: {
+          env: 'dev',
+          version: '1.0.0',
+        },
+        enableMessageOrdering: false,
+        expirationPolicy: {
+          ttl: {
+            seconds: 86400, // 1 day
+          },
+        },
+        filter: 'attribute.type = "order"',
+        deadLetterPolicy: {
+          deadLetterTopic: 'projects/my-project/topics/my-dead-letter-topic',
+          maxDeliveryAttempts: 5,
+        },
+        retryPolicy: {
+          minimumBackoff: {
+            seconds: 10,
+          },
+          maximumBackoff: {
+            seconds: 300,
+          },
+        },
+        detached: false,
+        enableExactlyOnceDelivery: true,
+        topicMessageRetentionDuration: {
+          seconds: 2592000, // 30 days
+        },
+        state: 'ACTIVE',
+      };
+
+      beforeEach(async () => {
+        server = getInstance({
+          createSubscriptionOptions: mockCreateSubscriptionOptions,
+        });
+        await server.listen(() => {});
+      });
+      it('should call "subscription.create" with argument', async () => {
+        // Verify that subscription.create() was called with the correct arguments
+        expect(subscriptionMock.create.calledOnce).to.be.true;
+        expect(
+          subscriptionMock.create.calledWith(mockCreateSubscriptionOptions),
+        ).to.be.true;
       });
     });
 
@@ -107,9 +170,26 @@ describe('GCPubSubServer', () => {
 
   describe('handleMessage', () => {
     const msg = {
-      pattern: 'test',
       data: 'tests',
-      id: '3',
+    };
+
+    const messageOptions: Message = {
+      ackId: 'id',
+      // @ts-ignore
+      publishTime: new Date(),
+      attributes: {
+        replyTo: 'replyTo',
+        id: '3',
+        pattern: 'test',
+        clientId: '4',
+      },
+      id: 'id',
+      received: 0,
+      deliveryAttempt: 1,
+      ack: () => {},
+      modAck: () => {},
+      nack: () => {},
+      data: Buffer.from(JSON.stringify(msg)),
     };
 
     beforeEach(async () => {
@@ -118,31 +198,18 @@ describe('GCPubSubServer', () => {
     });
 
     it('should send NO_MESSAGE_HANDLER error if key does not exists in handlers object', async () => {
-      await server.handleMessage({
-        ackId: 'id',
-        // @ts-ignore
-        publishTime: new Date(),
-        attributes: {
-          replyTo: 'replyTo',
-        },
-        id: 'id',
-        received: 0,
-        deliveryAttempt: 1,
-        ack: () => {},
-        modAck: () => {},
-        nack: () => {},
-        data: Buffer.from(JSON.stringify(msg)),
-      });
+      await server.handleMessage(messageOptions);
 
       expect(
         topicMock.publishMessage.calledWith({
           json: {
-            id: msg.id,
+            id: messageOptions.attributes.id,
             status: 'error',
             err: NO_MESSAGE_HANDLER,
           },
           attributes: {
-            id: msg.id,
+            id: messageOptions.attributes.id,
+            ...messageOptions.attributes,
           },
         }),
       ).to.be.true;
@@ -151,21 +218,9 @@ describe('GCPubSubServer', () => {
     it('should call handler if exists in handlers object', async () => {
       const handler = sinon.spy();
       (server as any).messageHandlers = objectToMap({
-        [msg.pattern]: handler as any,
+        [messageOptions.attributes.pattern]: handler as any,
       });
-      await server.handleMessage({
-        ackId: 'id',
-        // @ts-ignore
-        publishTime: new Date(),
-        attributes: {},
-        id: 'id',
-        received: 0,
-        deliveryAttempt: 1,
-        ack: () => {},
-        modAck: () => {},
-        nack: () => {},
-        data: Buffer.from(JSON.stringify(msg)),
-      });
+      await server.handleMessage(messageOptions);
       expect(handler.calledOnce).to.be.true;
     });
   });

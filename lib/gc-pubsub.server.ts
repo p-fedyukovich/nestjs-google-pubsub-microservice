@@ -1,5 +1,7 @@
 import {
   ClientConfig,
+  CreateSubscriptionOptions,
+  CreateSubscriptionResponse,
   Message,
   PubSub,
   Subscription,
@@ -48,6 +50,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   protected readonly replyTopics: Set<string>;
   protected readonly init: boolean;
   protected readonly checkExistence: boolean;
+  protected readonly createSubscriptionOptions: CreateSubscriptionOptions;
 
   protected client: PubSub | null = null;
   protected subscription: Subscription | null = null;
@@ -72,6 +75,8 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     this.init = this.options.init ?? GC_PUBSUB_DEFAULT_INIT;
     this.checkExistence =
       this.options.checkExistence ?? GC_PUBSUB_DEFAULT_CHECK_EXISTENCE;
+
+    this.createSubscriptionOptions = this.options.createSubscriptionOptions;
 
     this.replyTopics = new Set();
 
@@ -101,7 +106,10 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
     if (this.init) {
       await this.createIfNotExists(
-        this.subscription.create.bind(this.subscription),
+        this.subscription.create.bind(
+          this.subscription,
+          this.createSubscriptionOptions,
+        ) as () => Promise<CreateSubscriptionResponse>,
       );
     } else if (this.checkExistence) {
       const [exists] = await this.subscription.exists();
@@ -142,16 +150,11 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     const { data, attributes } = message;
     const rawMessage = JSON.parse(data.toString());
 
-    let packet;
-    if (attributes.pattern) {
-      packet = this.deserializer.deserialize({
-        data: rawMessage,
-        id: attributes.id,
-        pattern: attributes.pattern,
-      }) as IncomingRequest;
-    } else {
-      packet = this.deserializer.deserialize(rawMessage) as IncomingRequest;
-    }
+    let packet = this.deserializer.deserialize({
+      data: rawMessage,
+      id: attributes.id,
+      pattern: attributes.pattern,
+    }) as IncomingRequest;
 
     const pattern = isString(packet.pattern)
       ? packet.pattern
@@ -181,6 +184,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
         noHandlerPacket,
         attributes.replyTo,
         correlationId,
+        attributes,
       );
     }
 
@@ -189,7 +193,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     ) as Observable<any>;
 
     const publish = <T>(data: T) =>
-      this.sendMessage(data, attributes.replyTo, correlationId);
+      this.sendMessage(data, attributes.replyTo, correlationId, attributes);
 
     response$ && this.send(response$, publish);
   }
@@ -198,6 +202,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     message: T,
     replyTo: string,
     id: string,
+    attributes?: Record<string, string>,
   ): Promise<void> {
     Object.assign(message, { id });
 
@@ -207,9 +212,10 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
     this.replyTopics.add(replyTo);
 
-    await this.client
-      .topic(replyTo, this.publisherConfig)
-      .publishMessage({ json: outgoingResponse, attributes: { id } });
+    await this.client.topic(replyTo, this.publisherConfig).publishMessage({
+      json: outgoingResponse,
+      attributes: { id, ...attributes },
+    });
   }
 
   public async createIfNotExists(create: () => Promise<any>) {

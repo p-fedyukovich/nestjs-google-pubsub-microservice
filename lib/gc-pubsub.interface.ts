@@ -1,4 +1,4 @@
-import { ClientConfig } from '@google-cloud/pubsub';
+import { ClientConfig, CreateSubscriptionOptions } from '@google-cloud/pubsub';
 import { Deserializer, Serializer } from '@nestjs/microservices';
 import { PublishOptions } from '@google-cloud/pubsub/build/src/publisher';
 import { SubscriberOptions } from '@google-cloud/pubsub/build/src/subscriber';
@@ -11,10 +11,10 @@ export interface GCPubSubOptions {
   replySubscription?: string;
   noAck?: boolean;
   init?: boolean;
-  useAttributes?: boolean;
   checkExistence?: boolean;
   publisher?: PublishOptions;
   subscriber?: SubscriberOptions;
   serializer?: Serializer;
   deserializer?: Deserializer;
+  createSubscriptionOptions?: CreateSubscriptionOptions;
 }

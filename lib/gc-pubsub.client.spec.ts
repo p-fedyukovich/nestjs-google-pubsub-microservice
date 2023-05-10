@@ -148,68 +148,47 @@ describe('GCPubSubClient', () => {
   });
 
   describe('publish', () => {
-    describe('useAttributes=false', () => {
-      const pattern = 'test';
-      const msg = { pattern, data: 'data' };
-
-      beforeEach(() => {
-        client = getInstance({
-          replyTopic: 'replyTopic',
-          replySubscription: 'replySubcription',
-        });
-
-        (client as any).topic = topicMock;
+    beforeEach(() => {
+      client = getInstance({
+        replyTopic: 'replyTopic',
+        replySubscription: 'replySubcription',
       });
 
-      it('should send message to a proper topic', () => {
-        client['publish'](msg, () => {
-          expect(topicMock.publishMessage.called).to.be.true;
-          expect(topicMock.publishMessage.getCall(0).args[0].json).to.be.eql(
-            msg,
-          );
-        });
-      });
-
-      it('should remove listener from routing map on dispose', () => {
-        client['publish'](msg, () => ({}))();
-
-        expect(client['routingMap'].size).to.be.eq(0);
-      });
-
-      it('should call callback on error', () => {
-        const callback = sandbox.spy();
-        sinon.stub(client, 'assignPacketId' as any).callsFake(() => {
-          throw new Error();
-        });
-        client['publish'](msg, callback);
-        expect(callback.called).to.be.true;
-        expect(callback.getCall(0).args[0].err).to.be.instanceof(Error);
-      });
+      (client as any).topic = topicMock;
+    });
+    const pattern = 'test';
+    const msg = { pattern, data: 'data' };
+    it('should send message to a proper topic', () => {
+      client['publish'](msg, () => {});
+      const message = topicMock.publishMessage.getCall(0).args[0];
+      expect(topicMock.publishMessage.called).to.be.true;
+      expect(message.json).to.be.eql(msg.data);
     });
 
-    describe('useAttributes=true', () => {
-      const pattern = 'test';
-      const msg = { pattern, data: 'data' };
+    it('should remove listener from routing map on dispose', () => {
+      client['publish'](msg, () => ({}))();
 
-      beforeEach(() => {
-        client = getInstance({
-          replyTopic: 'replyTopic',
-          replySubscription: 'replySubcription',
-          useAttributes: true,
-        });
+      expect(client['routingMap'].size).to.be.eq(0);
+    });
 
-        (client as any).topic = topicMock;
+    it('should call callback on error', () => {
+      const callback = sandbox.spy();
+      sinon.stub(client, 'assignPacketId' as any).callsFake(() => {
+        throw new Error();
       });
+      client['publish'](msg, callback);
+      expect(callback.called).to.be.true;
+      expect(callback.getCall(0).args[0].err).to.be.instanceof(Error);
+    });
 
-      it('should send message to a proper topic', () => {
-        client['publish'](msg, () => {});
+    it('should send message to a proper topic', () => {
+      client['publish'](msg, () => {});
 
-        expect(topicMock.publishMessage.called).to.be.true;
-        const message = topicMock.publishMessage.getCall(0).args[0];
-        expect(message.json).to.be.eql(msg.data);
-        expect(message.attributes.pattern).to.be.eql(pattern);
-        expect(message.attributes.id).to.be.not.empty;
-      });
+      expect(topicMock.publishMessage.called).to.be.true;
+      const message = topicMock.publishMessage.getCall(0).args[0];
+      expect(message.json).to.be.eql(msg.data);
+      expect(message.attributes.pattern).to.be.eql(pattern);
+      expect(message.attributes.id).to.be.not.empty;
     });
   });
 
@@ -302,69 +281,56 @@ describe('GCPubSubClient', () => {
   });
 
   describe('dispatchEvent', () => {
-    describe('useAttributes=false', () => {
-      const msg = { pattern: 'pattern', data: 'data' };
+    const msg = { pattern: 'pattern', data: 'data' };
 
-      beforeEach(() => {
-        client = getInstance({
-          replyTopic: 'replyTopic',
-          replySubscription: 'replySubcription',
-        });
-        (client as any).topic = topicMock;
+    beforeEach(() => {
+      client = getInstance({
+        replyTopic: 'replyTopic',
+        replySubscription: 'replySubcription',
       });
-
-      it('should publish packet', async () => {
-        await client['dispatchEvent'](msg);
-        expect(topicMock.publishMessage.called).to.be.true;
-      });
-
-      it('should publish packet with proper data', async () => {
-        await client['dispatchEvent'](msg);
-        expect(topicMock.publishMessage.getCall(0).args[0].json).to.be.eql(msg);
-      });
-
-      it('should throw error', async () => {
-        topicMock.publishMessage.callsFake((a: any, b: any, c: any, d: any) =>
-          d(new Error()),
-        );
-        client['dispatchEvent'](msg).catch((err) =>
-          expect(err).to.be.instanceOf(Error),
-        );
-      });
+      (client as any).topic = topicMock;
     });
 
-    describe('useAttributes=true', () => {
-      const msg = { pattern: 'pattern', data: 'data' };
+    it('should publish packet', async () => {
+      await client['dispatchEvent'](msg);
+      expect(topicMock.publishMessage.called).to.be.true;
+    });
 
-      beforeEach(() => {
-        client = getInstance({
-          replyTopic: 'replyTopic',
-          replySubscription: 'replySubcription',
-          useAttributes: true,
-        });
-        (client as any).topic = topicMock;
-      });
+    it('should publish packet with proper data', async () => {
+      await client['dispatchEvent'](msg);
+      expect(topicMock.publishMessage.getCall(0).args[0].json).to.be.eql(
+        msg.data,
+      );
+    });
 
-      it('should publish packet', async () => {
-        await client['dispatchEvent'](msg);
-        expect(topicMock.publishMessage.called).to.be.true;
-      });
+    it('should throw error', async () => {
+      topicMock.publishMessage.callsFake((a: any, b: any, c: any, d: any) =>
+        d(new Error()),
+      );
+      client['dispatchEvent'](msg).catch((err) =>
+        expect(err).to.be.instanceOf(Error),
+      );
+    });
 
-      it('should publish packet with proper data', async () => {
-        await client['dispatchEvent'](msg);
-        const message = topicMock.publishMessage.getCall(0).args[0];
-        expect(message.json).to.be.eql(msg.data);
-        expect(message.attributes.pattern).to.be.eql(msg.pattern);
-      });
+    it('should publish packet', async () => {
+      await client['dispatchEvent'](msg);
+      expect(topicMock.publishMessage.called).to.be.true;
+    });
 
-      it('should throw error', async () => {
-        topicMock.publishMessage.callsFake((a: any, b: any, c: any, d: any) =>
-          d(new Error()),
-        );
-        client['dispatchEvent'](msg).catch((err) =>
-          expect(err).to.be.instanceOf(Error),
-        );
-      });
+    it('should publish packet with proper data', async () => {
+      await client['dispatchEvent'](msg);
+      const message = topicMock.publishMessage.getCall(0).args[0];
+      expect(message.json).to.be.eql(msg.data);
+      expect(message.attributes.pattern).to.be.eql(msg.pattern);
+    });
+
+    it('should throw error', async () => {
+      topicMock.publishMessage.callsFake((a: any, b: any, c: any, d: any) =>
+        d(new Error()),
+      );
+      client['dispatchEvent'](msg).catch((err) =>
+        expect(err).to.be.instanceOf(Error),
+      );
     });
   });
 

@@ -29,6 +29,8 @@ import {
 } from './gc-pubsub.constants';
 import { GCPubSubOptions } from './gc-pubsub.interface';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
+import { UUID, randomUUID } from 'crypto';
+import { GCPubSubMessageSerializer } from './gc-message.serializer';
 
 export class GCPubSubClient extends ClientProxy {
   protected readonly logger = new Logger(GCPubSubClient.name);
@@ -40,7 +42,7 @@ export class GCPubSubClient extends ClientProxy {
   protected readonly clientConfig: ClientConfig;
   protected readonly subscriberConfig: SubscriberOptions;
   protected readonly noAck: boolean;
-  protected readonly useAttributes: boolean;
+  protected readonly clientId: UUID;
 
   protected client: PubSub | null = null;
   protected replySubscription: Subscription | null = null;
@@ -50,6 +52,8 @@ export class GCPubSubClient extends ClientProxy {
 
   constructor(protected readonly options: GCPubSubOptions) {
     super();
+
+    this.clientId = randomUUID();
 
     this.clientConfig = this.options.client || GC_PUBSUB_DEFAULT_CLIENT_CONFIG;
 
@@ -67,13 +71,19 @@ export class GCPubSubClient extends ClientProxy {
 
     this.noAck = this.options.noAck ?? GC_PUBSUB_DEFAULT_NO_ACK;
     this.init = this.options.init ?? GC_PUBSUB_DEFAULT_INIT;
-    this.useAttributes =
-      this.options.useAttributes ?? GC_PUBSUB_DEFAULT_USE_ATTRIBUTES;
     this.checkExistence =
       this.options.checkExistence ?? GC_PUBSUB_DEFAULT_CHECK_EXISTENCE;
 
     this.initializeSerializer(options);
     this.initializeDeserializer(options);
+  }
+
+  public getRequestPattern(pattern: string): string {
+    return pattern;
+  }
+
+  public getResponsePattern(pattern: string): string {
+    return `${pattern}/reply`;
   }
 
   public async close(): Promise<void> {
@@ -175,16 +185,15 @@ export class GCPubSubClient extends ClientProxy {
       pattern,
     });
 
-    if (this.useAttributes) {
-      await this.topic.publishMessage({
-        json: serializedPacket.data,
-        attributes: {
-          pattern: serializedPacket.pattern,
-        },
-      });
-    } else {
-      await this.topic.publishMessage({ json: serializedPacket });
-    }
+    await this.topic.publishMessage({
+      ...serializedPacket,
+      attributes: {
+        replyTo: this.replyTopicName,
+        pattern: this.getRequestPattern(packet.pattern),
+        ...(serializedPacket.data?.attributes &&
+          serializedPacket.data?.attributes),
+      },
+    });
   }
 
   protected publish(
@@ -196,27 +205,20 @@ export class GCPubSubClient extends ClientProxy {
 
       const serializedPacket = this.serializer.serialize(packet);
       this.routingMap.set(packet.id, callback);
-
       if (this.topic) {
-        if (this.useAttributes) {
-          this.topic
-            .publishMessage({
-              json: serializedPacket.data,
-              attributes: {
-                replyTo: this.replyTopicName,
-                pattern: serializedPacket.pattern,
-                id: serializedPacket.id,
-              },
-            })
-            .catch((err) => callback({ err }));
-        } else {
-          this.topic
-            .publishMessage({
-              json: serializedPacket,
-              attributes: { replyTo: this.replyTopicName },
-            })
-            .catch((err) => callback({ err }));
-        }
+        this.topic
+          .publishMessage({
+            ...serializedPacket,
+            attributes: {
+              replyTo: this.replyTopicName,
+              pattern: this.getRequestPattern(packet.pattern),
+              id: packet.id,
+              clientId: this.clientId,
+              ...(serializedPacket.data?.attributes &&
+                serializedPacket.data?.attributes),
+            },
+          })
+          .catch((err) => callback({ err }));
       } else {
         callback({ err: new Error('Topic is not created') });
       }
@@ -225,6 +227,10 @@ export class GCPubSubClient extends ClientProxy {
     } catch (err) {
       callback({ err });
     }
+  }
+
+  protected initializeSerializer(options: GCPubSubOptions): void {
+    this.serializer = options?.serializer ?? new GCPubSubMessageSerializer();
   }
 
   public async handleResponse(message: {

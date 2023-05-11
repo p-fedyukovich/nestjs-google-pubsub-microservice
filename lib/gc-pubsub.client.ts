@@ -26,13 +26,17 @@ import {
   GC_PUBSUB_DEFAULT_TOPIC,
   GC_PUBSUB_DEFAULT_USE_ATTRIBUTES,
   GC_PUBSUB_DEFAULT_CHECK_EXISTENCE,
+  GC_PUBSUB_DEFAULT_AUTO_RESUME,
 } from './gc-pubsub.constants';
 import { GCPubSubOptions } from './gc-pubsub.interface';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
 import { UUID, randomUUID } from 'crypto';
 import { GCPubSubMessageSerializer } from './gc-message.serializer';
+import { GCPubSubMessage } from './gc-message.builder';
 
 export class GCPubSubClient extends ClientProxy {
+  public readonly clientId: UUID;
+
   protected readonly logger = new Logger(GCPubSubClient.name);
 
   protected readonly topicName: string;
@@ -42,7 +46,6 @@ export class GCPubSubClient extends ClientProxy {
   protected readonly clientConfig: ClientConfig;
   protected readonly subscriberConfig: SubscriberOptions;
   protected readonly noAck: boolean;
-  protected readonly clientId: UUID;
 
   protected client: PubSub | null = null;
   protected replySubscription: Subscription | null = null;
@@ -183,16 +186,19 @@ export class GCPubSubClient extends ClientProxy {
     const serializedPacket = this.serializer.serialize({
       ...packet,
       pattern,
-    });
+    }) as GCPubSubMessage;
+
+    const attributes = {
+      replyTo: this.replyTopicName,
+      pattern: this.getRequestPattern(packet.pattern),
+      ...(serializedPacket.json?.attributes &&
+        serializedPacket.json?.attributes),
+    };
 
     await this.topic.publishMessage({
-      ...serializedPacket,
-      attributes: {
-        replyTo: this.replyTopicName,
-        pattern: this.getRequestPattern(packet.pattern),
-        ...(serializedPacket.data?.attributes &&
-          serializedPacket.data?.attributes),
-      },
+      json: serializedPacket.json,
+      orderingKey: serializedPacket.orderingKey,
+      attributes: attributes,
     });
   }
 
@@ -203,22 +209,30 @@ export class GCPubSubClient extends ClientProxy {
     try {
       const packet = this.assignPacketId(partialPacket);
 
-      const serializedPacket = this.serializer.serialize(packet);
+      const serializedPacket = this.serializer.serialize(
+        packet,
+      ) as GCPubSubMessage;
+
+      const attributes = {
+        replyTo: this.replyTopicName,
+        pattern: this.getRequestPattern(packet.pattern),
+        id: packet.id,
+        clientId: this.clientId,
+        ...(serializedPacket.json?.attributes &&
+          serializedPacket.json?.attributes),
+      };
+
       this.routingMap.set(packet.id, callback);
       if (this.topic) {
         this.topic
           .publishMessage({
-            ...serializedPacket,
-            attributes: {
-              replyTo: this.replyTopicName,
-              pattern: this.getRequestPattern(packet.pattern),
-              id: packet.id,
-              clientId: this.clientId,
-              ...(serializedPacket.data?.attributes &&
-                serializedPacket.data?.attributes),
-            },
+            json: serializedPacket.json,
+            orderingKey: serializedPacket.orderingKey,
+            attributes: attributes,
           })
-          .catch((err) => callback({ err }));
+          .catch((err) => {
+            callback({ err });
+          });
       } else {
         callback({ err: new Error('Topic is not created') });
       }

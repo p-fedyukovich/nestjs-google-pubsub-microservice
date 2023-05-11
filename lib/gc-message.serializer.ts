@@ -7,10 +7,15 @@ export class GCPubSubMessageSerializer
   constructor() {}
 
   serialize(packet: ReadPacket<any> | any): GCPubSubMessage<any, any> {
-    const message =
-      packet.data && packet.data instanceof GCPubSubMessage
-        ? (packet.data as GCPubSubMessage)
-        : new GCPubSubMessageBuilder(packet.data).build();
-    return { ...message };
+    let message: GCPubSubMessage;
+
+    if (packet.data instanceof GCPubSubMessage) {
+      message = packet.data as GCPubSubMessage;
+      console.log(message);
+    } else {
+      message = new GCPubSubMessageBuilder(packet.data).build();
+    }
+
+    return message;
   }
 }

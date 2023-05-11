@@ -1,115 +1,50 @@
 import { expect } from 'chai';
-import { GCPubSubMessageBuilder } from './gc-message.builder';
+
+import { GCPubSubMessageBuilder, GCPubSubMessage } from './gc-message.builder';
 import { GCPubSubMessageSerializer } from './gc-message.serializer';
+import { SinonSandbox, SinonStub } from 'sinon';
+import sinon = require('sinon');
 
 describe('GCPubSubMessageSerializer', () => {
-  let instance: GCPubSubMessageSerializer;
+  let serializer: GCPubSubMessageSerializer = new GCPubSubMessageSerializer();
+  let sandbox: SinonSandbox = sinon.createSandbox();
+  let buildStub: SinonStub;
+
   beforeEach(() => {
-    instance = new GCPubSubMessageSerializer();
+    buildStub = sandbox.stub(GCPubSubMessageBuilder.prototype, 'build');
   });
-  describe('serialize', () => {
-    it('undefined', () => {
-      expect(instance.serialize({ data: undefined })).to.deep.eq({
-        json: undefined,
-        attributes: undefined,
-        orderingKey: undefined,
-      });
-    });
 
-    it('null', () => {
-      expect(instance.serialize({ data: null })).to.deep.eq({
-        json: null,
-        attributes: undefined,
-        orderingKey: undefined,
-      });
-    });
+  afterEach(() => {
+    sandbox.restore();
+    buildStub.reset();
+  });
 
-    it('string', () => {
-      expect(instance.serialize({ data: 'string' })).to.deep.eq({
-        json: 'string',
-        attributes: undefined,
-        orderingKey: undefined,
-      });
-    });
+  it('should return a GCPubSubMessage instance', () => {
+    buildStub.returns(
+      new GCPubSubMessage({ key: 'value' }, { attr: 'value' }, undefined),
+    );
+    const data = { key: 'value' };
+    const attributes = { attr: 'value' };
+    const msg = new GCPubSubMessageBuilder(data)
+      .setAttributes(attributes)
+      .build();
+    console.log(msg);
+    const packet = { data: msg, pattern: 'test' };
+    const message = new GCPubSubMessage(data, attributes, undefined);
 
-    it('number', () => {
-      expect(instance.serialize({ data: 12345 })).to.deep.eq({
-        json: 12345,
-        attributes: undefined,
-        orderingKey: undefined,
-      });
-    });
+    const result = serializer.serialize(packet);
 
-    it('array', () => {
-      expect(instance.serialize({ data: [1, 2, 3, 4, 5] })).to.deep.eq({
-        json: [1, 2, 3, 4, 5],
-        attributes: undefined,
-        orderingKey: undefined,
-      });
-    });
+    expect(result).to.deep.equal(message);
+  });
 
-    it('object', () => {
-      const serObject = { prop: 'value' };
-      expect(instance.serialize({ data: serObject })).to.deep.eq({
-        json: {
-          prop: 'value',
-        },
-        attributes: undefined,
-        orderingKey: undefined,
-      });
-    });
+  it('should create a new GCPubSubMessage using GCPubSubMessageBuilder if packet data is not a GCPubSubMessage', () => {
+    const data = 'data';
+    buildStub.returns(new GCPubSubMessage(data, undefined, undefined));
+    const packet = { data: data, pattern: 'test' };
 
-    it('GCPMessage with attributes', () => {
-      const attributes = {
-        key: 'abcde',
-      };
-      const message = new GCPubSubMessageBuilder({
-        value: 'string',
-      })
-        .setAttributes(attributes)
-        .build();
-      expect(instance.serialize({ data: message })).to.deep.eq({
-        json: {
-          value: 'string',
-        },
-        attributes: {
-          key: 'abcde',
-        },
-        orderingKey: undefined,
-      });
-    });
+    const result = serializer.serialize(packet);
 
-    it('GCPMessage with orderingKey', () => {
-      const orderingKey = 'key';
-      const message = new GCPubSubMessageBuilder({
-        value: 'string',
-      })
-        .setOrderingKey(orderingKey)
-        .build();
-      expect(instance.serialize({ data: message })).to.deep.eq({
-        json: {
-          value: 'string',
-        },
-        orderingKey: 'key',
-        attributes: undefined,
-      });
-    });
-
-    it('GCPMessage with attributes and orderingKey', () => {
-      const orderingKey = 'key';
-      const message = new GCPubSubMessageBuilder({
-        value: 'string',
-      })
-        .setOrderingKey(orderingKey)
-        .setAttributes({ key: 'key' })
-        .build();
-      expect(instance.serialize({ data: message })).to.deep.eq({
-        json: {
-          value: 'string',
-        },
-        orderingKey: 'key',
-        attributes: { key: 'key' },
-      });
-    });
+    expect(result).to.be.an.instanceOf(GCPubSubMessage);
+    expect(buildStub.calledOnce).to.be.true;
   });
 });

@@ -1,4 +1,5 @@
 import { PubSub } from '@google-cloud/pubsub';
+import { RpcException } from '@nestjs/microservices';
 
 export class GCPubSubMessage<TData = any, TAttrs = any> {
   constructor(
@@ -8,13 +9,11 @@ export class GCPubSubMessage<TData = any, TAttrs = any> {
   ) {}
 }
 
-export class GCPubSubMessageBuilder<TData, TAttrs = any> {
-  private attributes?: TAttrs;
-  private orderingKey?: string;
+export class GCPubSubMessageBuilder<TData, TAttrs extends {}> {
   constructor(
     private data?: TData,
-    attributes?: TAttrs,
-    orderingKey?: string,
+    private attributes?: Partial<TAttrs>,
+    private orderingKey?: string,
   ) {}
 
   public setAttributes(attributes: TAttrs) {
@@ -33,6 +32,11 @@ export class GCPubSubMessageBuilder<TData, TAttrs = any> {
   }
 
   public build() {
-    return new GCPubSubMessage(this.data, this.attributes, this.orderingKey);
+    if (!this.data) throw new Error('Missing Data');
+    return new GCPubSubMessage<TData, TAttrs>(
+      this.data,
+      this.attributes as TAttrs,
+      this.orderingKey,
+    );
   }
 }

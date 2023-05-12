@@ -98,7 +98,7 @@ const client =
       },
     });
 client
-  .send('pattern', 'Hello world!')
+  .send({ cmd: 'pattern' }, 'Hello world!')
   .subscribe((response) => console.log(response));
 ```
 
@@ -107,7 +107,7 @@ client
 In more sophisticated scenarios, you may want to access more information about the incoming request. When using the Pub/Sub transporter, you can access the `GCPubSubContext` object.
 
 ```typescript
-@MessagePattern('notifications')
+@MessagePattern({ cmd: 'notifications' })
 getNotifications(@Payload() data: number[], @Ctx() context: GCPubSubContext) {
   console.log(`Pattern: ${context.getPattern()}`);
 }
@@ -116,7 +116,7 @@ getNotifications(@Payload() data: number[], @Ctx() context: GCPubSubContext) {
 To access the original Pub/Sub message (with the `attributes`, `data`, `ack` and `nack`), use the `getMessage()` method of the `GCPubSubContext` object, as follows:
 
 ```typescript
-@MessagePattern('notifications')
+@MessagePattern({ cmd: 'notifications' })
 getNotifications(@Payload() data: number[], @Ctx() context: GCPubSubContext) {
   console.log(context.getMessage());
 }
@@ -142,7 +142,7 @@ To enable manual acknowledgment mode, set the `noAck` property to `false`:
 When manual consumer acknowledgements are turned on, we must send a proper acknowledgement from the worker to signal that we are done with a task.
 
 ```typescript
-@MessagePattern('notifications')
+@MessagePattern({ cmd: 'notifications' })
 getNotifications(@Payload() data: number[], @Ctx() context: GCPubSubContext) {
   const originalMsg = context.getMessage();
 

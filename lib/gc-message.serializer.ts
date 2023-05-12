@@ -11,7 +11,6 @@ export class GCPubSubMessageSerializer
 
     if (packet.data instanceof GCPubSubMessage) {
       message = packet.data as GCPubSubMessage;
-      console.log(message);
     } else {
       message = new GCPubSubMessageBuilder(packet.data).build();
     }

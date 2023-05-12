@@ -28,7 +28,6 @@ describe('GCPubSubMessageSerializer', () => {
     const msg = new GCPubSubMessageBuilder(data)
       .setAttributes(attributes)
       .build();
-    console.log(msg);
     const packet = { data: msg, pattern: 'test' };
     const message = new GCPubSubMessage(data, attributes, undefined);
 

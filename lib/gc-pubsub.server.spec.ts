@@ -178,10 +178,10 @@ describe('GCPubSubServer', () => {
       // @ts-ignore
       publishTime: new Date(),
       attributes: {
-        replyTo: 'replyTo',
-        id: '3',
-        pattern: 'test',
-        clientId: '4',
+        _replyTo: 'replyTo',
+        _id: '3',
+        _pattern: 'test',
+        _clientId: '4',
       },
       id: 'id',
       received: 0,
@@ -203,12 +203,12 @@ describe('GCPubSubServer', () => {
       expect(
         topicMock.publishMessage.calledWith({
           json: {
-            id: messageOptions.attributes.id,
+            id: messageOptions.attributes._id,
             status: 'error',
             err: NO_MESSAGE_HANDLER,
           },
           attributes: {
-            id: messageOptions.attributes.id,
+            id: messageOptions.attributes._id,
             ...messageOptions.attributes,
           },
         }),
@@ -221,10 +221,10 @@ describe('GCPubSubServer', () => {
         // @ts-ignore
         publishTime: new Date(Date.now() - 5000),
         attributes: {
-          replyTo: 'replyTo',
-          id: '3',
-          pattern: 'test',
-          clientId: '4',
+          _replyTo: 'replyTo',
+          _id: '3',
+          _pattern: 'test',
+          _clientId: '4',
           timeout: '4000',
         },
         id: 'id',
@@ -240,12 +240,12 @@ describe('GCPubSubServer', () => {
       expect(
         topicMock.publishMessage.calledWith({
           json: {
-            id: timeoutMessageOptions.attributes.id,
+            id: timeoutMessageOptions.attributes._id,
             status: 'error',
             err: 'Message Timeout',
           },
           attributes: {
-            id: timeoutMessageOptions.attributes.id,
+            id: timeoutMessageOptions.attributes._id,
             ...timeoutMessageOptions.attributes,
           },
         }),
@@ -255,7 +255,7 @@ describe('GCPubSubServer', () => {
     it('should call handler if exists in handlers object', async () => {
       const handler = sinon.spy();
       (server as any).messageHandlers = objectToMap({
-        [messageOptions.attributes.pattern]: handler as any,
+        [messageOptions.attributes._pattern]: handler as any,
       });
       await server.handleMessage(messageOptions);
       expect(handler.calledOnce).to.be.true;

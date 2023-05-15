@@ -153,13 +153,14 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
     let packet = this.deserializer.deserialize({
       data: rawMessage,
-      id: attributes.id,
-      pattern: attributes.pattern,
+      id: attributes._id,
+      pattern: attributes._pattern,
     }) as IncomingRequest;
 
     const pattern = isString(packet.pattern)
       ? packet.pattern
       : JSON.stringify(packet.pattern);
+
     const correlationId = packet.id;
 
     const timeout: number = +attributes.timeout;
@@ -172,7 +173,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
         };
         return this.sendMessage(
           timeoutPacket,
-          attributes.replyTo,
+          attributes._replyTo,
           correlationId,
           attributes,
         );
@@ -188,7 +189,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     const handler = this.getHandlerByPattern(pattern);
 
     if (!handler) {
-      if (!attributes.replyTo) {
+      if (!attributes._replyTo) {
         return;
       }
 
@@ -200,7 +201,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
       };
       return this.sendMessage(
         noHandlerPacket,
-        attributes.replyTo,
+        attributes._replyTo,
         correlationId,
         attributes,
       );
@@ -211,7 +212,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     ) as Observable<any>;
 
     const publish = <T>(data: T) =>
-      this.sendMessage(data, attributes.replyTo, correlationId, attributes);
+      this.sendMessage(data, attributes._replyTo, correlationId, attributes);
 
     response$ && this.send(response$, publish);
   }

@@ -1,5 +1,5 @@
 import { DynamicModule, FactoryProvider, ValueProvider } from '@nestjs/common';
-import { GCPubSubModule } from './gc-pubsub.module';
+import { GCPubSubClientModule } from './gc-pubsub.module';
 import { expect } from 'chai';
 import { GCPubSubClient } from './gc-pubsub.client';
 import { getGCPubSubClientToken } from './gc-client.inject.decorator';
@@ -18,11 +18,11 @@ describe('GCPubSubModule', () => {
       },
     ];
     beforeEach(() => {
-      dynamicModule = GCPubSubModule.register(moduleConfigs);
+      dynamicModule = GCPubSubClientModule.register(moduleConfigs);
     });
 
     it('should return an expected module ref', () => {
-      expect(dynamicModule.module).to.be.equal(GCPubSubModule);
+      expect(dynamicModule.module).to.be.equal(GCPubSubClientModule);
     });
     it('should return a provider array', () =>
       dynamicModule.providers.forEach((provider, index) => {
@@ -44,13 +44,13 @@ describe('GCPubSubModule', () => {
       useFactory,
     };
     it('should return an expected module ref', () => {
-      dynamicModule = GCPubSubModule.registerAsync([registerOption]);
-      expect(dynamicModule.module).to.be.eql(GCPubSubModule);
+      dynamicModule = GCPubSubClientModule.registerAsync([registerOption]);
+      expect(dynamicModule.module).to.be.eql(GCPubSubClientModule);
     });
 
     describe('when useFactory', () => {
       it('should return an expected providers array with useFactory', () => {
-        dynamicModule = GCPubSubModule.registerAsync([registerOption]);
+        dynamicModule = GCPubSubClientModule.registerAsync([registerOption]);
         expect(dynamicModule.imports).to.be.deep.eq([]);
         expect(dynamicModule.exports).to.be.eq(dynamicModule.providers);
         expect(dynamicModule.providers).to.be.have.length(1);

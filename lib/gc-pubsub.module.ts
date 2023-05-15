@@ -30,7 +30,7 @@ export interface GCPubSubRegisterClientAsyncOption
   exports: [TimeoutInterceptor],
 })
 @Global()
-export class GCPubSubModule {
+export class GCPubSubClientModule {
   static register(options: GCPubSubRegisterClientOptions[]): DynamicModule {
     const clients: any = options.map((option) => {
       return {
@@ -41,7 +41,7 @@ export class GCPubSubModule {
       };
     });
     return {
-      module: GCPubSubModule,
+      module: GCPubSubClientModule,
       providers: clients,
       exports: clients,
     };
@@ -66,7 +66,7 @@ export class GCPubSubModule {
       [],
     );
     return {
-      module: GCPubSubModule,
+      module: GCPubSubClientModule,
       providers: providers,
       exports: providers,
       imports: imports,
@@ -86,10 +86,10 @@ export class GCPubSubModule {
   private static createFactoryWrapper(
     useFactory: GCPubSubRegisterClientAsyncOption['useFactory'],
   ) {
-    return async (args: any[]) => {
+    return async (...args: any[]) => {
       const clientOptions = await useFactory(...args);
       const clientProxyRef = new GCPubSubClient(clientOptions);
-      const client = this.assignOnAppShutdownHook(clientProxyRef);
+      return this.assignOnAppShutdownHook(clientProxyRef);
     };
   }
 

@@ -24,7 +24,6 @@ import {
   GC_PUBSUB_DEFAULT_PUBLISHER_CONFIG,
   GC_PUBSUB_DEFAULT_SUBSCRIBER_CONFIG,
   GC_PUBSUB_DEFAULT_TOPIC,
-  GC_PUBSUB_DEFAULT_USE_ATTRIBUTES,
   GC_PUBSUB_DEFAULT_CHECK_EXISTENCE,
   GC_PUBSUB_DEFAULT_AUTO_RESUME,
 } from './gc-pubsub.constants';
@@ -218,7 +217,6 @@ export class GCPubSubClient extends ClientProxy {
         ...(serializedPacket.json?.attributes &&
           serializedPacket.json?.attributes),
       };
-
       this.routingMap.set(packet.id, callback);
       if (this.topic) {
         this.topic

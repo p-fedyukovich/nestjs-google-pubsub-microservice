@@ -1,7 +1,6 @@
-import { INestApplication, RequestTimeoutException } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 
 import { TimeoutInterceptor } from './gc-pubsub.timeout.decorator';
-import { expect } from 'chai';
 import { Test } from '@nestjs/testing';
 import { GCPubSubTimeoutController } from './gc-pubsub.timeout.controller';
 import * as request from 'supertest';

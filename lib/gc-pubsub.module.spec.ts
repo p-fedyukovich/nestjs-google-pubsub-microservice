@@ -1,13 +1,7 @@
-import {
-  DynamicModule,
-  FactoryProvider,
-  Provider,
-  ValueProvider,
-} from '@nestjs/common';
+import { DynamicModule, FactoryProvider, ValueProvider } from '@nestjs/common';
 import { GCPubSubModule } from './gc-pubsub.module';
 import { expect } from 'chai';
 import { GCPubSubClient } from './gc-pubsub.client';
-import sinon = require('sinon');
 import { getGCPubSubClientToken } from './gc-client.inject.decorator';
 
 describe('GCPubSubModule', () => {
@@ -59,7 +53,6 @@ describe('GCPubSubModule', () => {
         dynamicModule = GCPubSubModule.registerAsync([registerOption]);
         expect(dynamicModule.imports).to.be.deep.eq([]);
         expect(dynamicModule.exports).to.be.eq(dynamicModule.providers);
-        console.log(dynamicModule);
         expect(dynamicModule.providers).to.be.have.length(1);
 
         const provider = dynamicModule.providers[0] as FactoryProvider;

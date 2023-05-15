@@ -8,7 +8,7 @@ import {
 } from '@google-cloud/pubsub';
 import { PublishOptions } from '@google-cloud/pubsub/build/src/publisher';
 import { SubscriberOptions } from '@google-cloud/pubsub/build/src/subscriber';
-import { Observable, TimeoutError } from 'rxjs';
+import { Observable } from 'rxjs';
 import {
   CustomTransportStrategy,
   IncomingRequest,

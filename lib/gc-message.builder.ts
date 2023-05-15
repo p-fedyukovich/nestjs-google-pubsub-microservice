@@ -1,6 +1,3 @@
-import { PubSub } from '@google-cloud/pubsub';
-import { RpcException } from '@nestjs/microservices';
-
 export class GCPubSubMessage<TData = any, TAttrs = any> {
   constructor(
     public readonly json: TData,

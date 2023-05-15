@@ -12,8 +12,9 @@ export class GCPubSubMessage<TData = any, TAttrs = any> {
 export class GCPubSubMessageBuilder<TData, TAttrs extends {}> {
   constructor(
     private data?: TData,
-    private attributes?: Partial<TAttrs>,
+    private attributes: Partial<TAttrs> = {},
     private orderingKey?: string,
+    private timeout: number = 0,
   ) {}
 
   public setAttributes(attributes: TAttrs) {
@@ -31,8 +32,15 @@ export class GCPubSubMessageBuilder<TData, TAttrs extends {}> {
     return this;
   }
 
+  public setTimeout(ms: number) {
+    this.timeout = ms;
+    return this;
+  }
+
   public build() {
     if (!this.data) throw new Error('Missing Data');
+    if (this.timeout < 0) throw new Error('Invalid Timeout Value');
+    else if (this.timeout > 0) (this.attributes as any).timeout = this.timeout;
     return new GCPubSubMessage<TData, TAttrs>(
       this.data,
       this.attributes as TAttrs,

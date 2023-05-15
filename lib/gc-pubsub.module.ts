@@ -10,6 +10,7 @@ import { TimeoutInterceptor } from './gc-pubsub.timeout.decorator';
 import { GCPubSubOptions } from './gc-pubsub.interface';
 import { ClientProxy, Closeable } from '@nestjs/microservices';
 import { GCPubSubClient } from './gc-pubsub.client';
+import { getGCPubSubClientToken } from './gc-client.inject.decorator';
 
 export interface GCPubSubRegisterClientOptions {
   name: string;
@@ -33,7 +34,7 @@ export class GCPubSubModule {
   static register(options: GCPubSubRegisterClientOptions[]): DynamicModule {
     const clients: any = options.map((option) => {
       return {
-        provide: option.name,
+        provide: getGCPubSubClientToken(option.name),
         useValue: this.assignOnAppShutdownHook(
           new GCPubSubClient(option.config),
         ),
@@ -76,7 +77,7 @@ export class GCPubSubModule {
     options: GCPubSubRegisterClientAsyncOption,
   ): Provider {
     return {
-      provide: options.name,
+      provide: getGCPubSubClientToken(options.name),
       useFactory: this.createFactoryWrapper(options.useFactory),
       inject: options.inject || [],
     };

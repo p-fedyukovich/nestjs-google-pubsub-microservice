@@ -8,6 +8,7 @@ import { GCPubSubModule } from './gc-pubsub.module';
 import { expect } from 'chai';
 import { GCPubSubClient } from './gc-pubsub.client';
 import sinon = require('sinon');
+import { getGCPubSubClientToken } from './gc-client.inject.decorator';
 
 describe('GCPubSubModule', () => {
   let dynamicModule: DynamicModule;
@@ -32,7 +33,7 @@ describe('GCPubSubModule', () => {
     it('should return a provider array', () =>
       dynamicModule.providers.forEach((provider, index) => {
         expect((provider as ValueProvider).provide).to.equal(
-          moduleConfigs[index].name,
+          getGCPubSubClientToken(moduleConfigs[index].name),
         );
         expect((provider as ValueProvider).useValue).to.be.instanceOf(
           GCPubSubClient,
@@ -62,7 +63,7 @@ describe('GCPubSubModule', () => {
         expect(dynamicModule.providers).to.be.have.length(1);
 
         const provider = dynamicModule.providers[0] as FactoryProvider;
-        expect(provider.provide).to.be.eql('test');
+        expect(provider.provide).to.be.eql(getGCPubSubClientToken('test'));
         expect(provider.inject).to.be.deep.eq([]);
         expect(provider.useFactory).to.be.an.instanceOf(Function);
       });

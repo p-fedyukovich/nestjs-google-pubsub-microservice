@@ -10,3 +10,4 @@ export const GC_PUBSUB_DEFAULT_USE_ATTRIBUTES = false;
 export const ALREADY_EXISTS = 6;
 export const GC_PUBSUB_DEFAULT_AUTO_RESUME = false;
 export const GC_PUBSUB_DEFAULT_CREATE_SUBSCRIPTION_COMMIT = {};
+export const GC_PUBSUB_CLIENT_PREFIX = 'gcpubsubclient:';

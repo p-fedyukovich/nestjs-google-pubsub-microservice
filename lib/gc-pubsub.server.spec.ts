@@ -215,6 +215,43 @@ describe('GCPubSubServer', () => {
       ).to.be.true;
     });
 
+    it('should send TIMEOUT_ERROR_HANDLER if the message is timed out', async () => {
+      const timeoutMessageOptions: Message = {
+        ackId: 'id',
+        // @ts-ignore
+        publishTime: new Date(Date.now() - 5000),
+        attributes: {
+          replyTo: 'replyTo',
+          id: '3',
+          pattern: 'test',
+          clientId: '4',
+          timeout: '4000',
+        },
+        id: 'id',
+        received: 0,
+        deliveryAttempt: 1,
+        ack: () => {},
+        modAck: () => {},
+        nack: () => {},
+        data: Buffer.from(JSON.stringify(msg)),
+      };
+      await server.handleMessage(timeoutMessageOptions);
+
+      expect(
+        topicMock.publishMessage.calledWith({
+          json: {
+            id: timeoutMessageOptions.attributes.id,
+            status: 'error',
+            err: 'Message Timeout',
+          },
+          attributes: {
+            id: timeoutMessageOptions.attributes.id,
+            ...timeoutMessageOptions.attributes,
+          },
+        }),
+      ).to.be.true;
+    });
+
     it('should call handler if exists in handlers object', async () => {
       const handler = sinon.spy();
       (server as any).messageHandlers = objectToMap({

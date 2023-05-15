@@ -8,7 +8,7 @@ import {
 } from '@google-cloud/pubsub';
 import { PublishOptions } from '@google-cloud/pubsub/build/src/publisher';
 import { SubscriberOptions } from '@google-cloud/pubsub/build/src/subscriber';
-import { Observable } from 'rxjs';
+import { Observable, TimeoutError } from 'rxjs';
 import {
   CustomTransportStrategy,
   IncomingRequest,
@@ -147,8 +147,9 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   }
 
   public async handleMessage(message: Message) {
-    const { data, attributes } = message;
+    const { data, attributes, publishTime } = message;
     const rawMessage = JSON.parse(data.toString());
+    const now = new Date();
 
     let packet = this.deserializer.deserialize({
       data: rawMessage,
@@ -160,6 +161,23 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
       ? packet.pattern
       : JSON.stringify(packet.pattern);
     const correlationId = packet.id;
+
+    const timeout: number = +attributes.timeout;
+    if (timeout && timeout > 0) {
+      if (now.getTime() - publishTime.getTime() >= timeout) {
+        const timeoutPacket = {
+          id: correlationId,
+          status: 'error',
+          err: 'Message Timeout',
+        };
+        return this.sendMessage(
+          timeoutPacket,
+          attributes.replyTo,
+          correlationId,
+          attributes,
+        );
+      }
+    }
 
     const context = new GCPubSubContext([message, pattern]);
 

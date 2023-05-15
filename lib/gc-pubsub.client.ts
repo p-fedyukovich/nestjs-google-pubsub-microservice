@@ -127,7 +127,6 @@ export class GCPubSubClient extends ClientProxy {
           throw new Error(message);
         }
       }
-
       this.replySubscription = replyTopic.subscription(
         this.replySubscriptionName,
         this.subscriberConfig,
@@ -208,14 +207,12 @@ export class GCPubSubClient extends ClientProxy {
       const serializedPacket = this.serializer.serialize(
         packet,
       ) as GCPubSubMessage;
-
       const attributes = {
         _replyTo: this.replyTopicName,
         _pattern: JSON.stringify(this.getRequestPattern(packet.pattern)),
         _id: packet.id,
         _clientId: this.clientId,
-        ...(serializedPacket.json?.attributes &&
-          serializedPacket.json?.attributes),
+        ...(serializedPacket.attributes && serializedPacket.attributes),
       };
       this.routingMap.set(packet.id, callback);
       if (this.topic) {

@@ -46,6 +46,7 @@ export class GCPubSubClient extends ClientProxy {
   protected readonly clientConfig: ClientConfig;
   protected readonly subscriberConfig: SubscriberOptions;
   protected readonly noAck: boolean;
+  protected readonly autoResume: boolean;
 
   protected client: PubSub | null = null;
   protected replySubscription: Subscription | null = null;
@@ -76,6 +77,7 @@ export class GCPubSubClient extends ClientProxy {
     this.init = this.options.init ?? GC_PUBSUB_DEFAULT_INIT;
     this.checkExistence =
       this.options.checkExistence ?? GC_PUBSUB_DEFAULT_CHECK_EXISTENCE;
+    this.autoResume = this.options.autoResume ?? GC_PUBSUB_DEFAULT_AUTO_RESUME;
 
     this.initializeSerializer(options);
     this.initializeDeserializer(options);
@@ -83,10 +85,6 @@ export class GCPubSubClient extends ClientProxy {
 
   public getRequestPattern(pattern: string): string {
     return pattern;
-  }
-
-  public getResponsePattern(pattern: string): string {
-    return `${pattern}/reply`;
   }
 
   public async close(): Promise<void> {
@@ -189,8 +187,8 @@ export class GCPubSubClient extends ClientProxy {
     }) as GCPubSubMessage;
 
     const attributes = {
-      replyTo: this.replyTopicName,
-      pattern: this.getRequestPattern(packet.pattern),
+      _replyTo: this.replyTopicName,
+      _pattern: this.getRequestPattern(packet.pattern),
       ...(serializedPacket.json?.attributes &&
         serializedPacket.json?.attributes),
     };
@@ -201,7 +199,6 @@ export class GCPubSubClient extends ClientProxy {
       attributes: attributes,
     });
   }
-
   protected publish(
     partialPacket: ReadPacket,
     callback: (packet: WritePacket) => void,
@@ -214,10 +211,10 @@ export class GCPubSubClient extends ClientProxy {
       ) as GCPubSubMessage;
 
       const attributes = {
-        replyTo: this.replyTopicName,
-        pattern: this.getRequestPattern(packet.pattern),
-        id: packet.id,
-        clientId: this.clientId,
+        _replyTo: this.replyTopicName,
+        _pattern: this.getRequestPattern(packet.pattern),
+        _id: packet.id,
+        _clientId: this.clientId,
         ...(serializedPacket.json?.attributes &&
           serializedPacket.json?.attributes),
       };
@@ -231,6 +228,9 @@ export class GCPubSubClient extends ClientProxy {
             attributes: attributes,
           })
           .catch((err) => {
+            if (this.autoResume && serializedPacket.orderingKey) {
+              this.topic.resumePublishing(serializedPacket.orderingKey);
+            }
             callback({ err });
           });
       } else {

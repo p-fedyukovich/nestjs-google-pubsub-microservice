@@ -3,6 +3,7 @@ import * as sinon from 'sinon';
 import { ALREADY_EXISTS } from './gc-pubsub.constants';
 import { GCPubSubClient } from './gc-pubsub.client';
 import { GCPubSubOptions } from './gc-pubsub.interface';
+import { GCPubSubMessageBuilder } from './gc-message.builder';
 
 describe('GCPubSubClient', () => {
   let client: GCPubSubClient;
@@ -152,9 +153,10 @@ describe('GCPubSubClient', () => {
       client = getInstance({
         replyTopic: 'replyTopic',
         replySubscription: 'replySubcription',
+        autoResume: true,
       });
-
       (client as any).topic = topicMock;
+      topicMock.publishMessage = sinon.stub().resolves();
     });
     const pattern = 'test';
     const msg = { pattern, data: 'data' };
@@ -181,14 +183,26 @@ describe('GCPubSubClient', () => {
       expect(callback.getCall(0).args[0].err).to.be.instanceof(Error);
     });
 
+    it('should call resumePublishing on error with ordering key', (done) => {
+      topicMock.publishMessage = sinon.stub().rejects();
+      const message = {
+        data: new GCPubSubMessageBuilder('data').setOrderingKey('asdf').build(),
+        pattern: 'test',
+      };
+      client['publish'](message, () => {
+        expect(topicMock.resumePublishing.called).to.be.true;
+        done();
+      });
+    });
+
     it('should send message to a proper topic', () => {
       client['publish'](msg, () => {});
 
       expect(topicMock.publishMessage.called).to.be.true;
       const message = topicMock.publishMessage.getCall(0).args[0];
       expect(message.json).to.be.eql(msg.data);
-      expect(message.attributes.pattern).to.be.eql(pattern);
-      expect(message.attributes.id).to.be.not.empty;
+      expect(message.attributes._pattern).to.be.eql(pattern);
+      expect(message.attributes._id).to.be.not.empty;
     });
   });
 
@@ -321,7 +335,7 @@ describe('GCPubSubClient', () => {
       await client['dispatchEvent'](msg);
       const message = topicMock.publishMessage.getCall(0).args[0];
       expect(message.json).to.be.eql(msg.data);
-      expect(message.attributes.pattern).to.be.eql(msg.pattern);
+      expect(message.attributes._pattern).to.be.eql(msg.pattern);
     });
 
     it('should throw error', async () => {
@@ -368,6 +382,7 @@ describe('GCPubSubClient', () => {
       publishMessage: sandbox.stub().resolves(),
       exists: sandbox.stub().resolves([true]),
       subscription: sandbox.stub().returns(subscriptionMock),
+      resumePublishing: sinon.stub().resolves(),
     };
 
     pubsub = {

@@ -201,7 +201,7 @@ describe('GCPubSubClient', () => {
       expect(topicMock.publishMessage.called).to.be.true;
       const message = topicMock.publishMessage.getCall(0).args[0];
       expect(message.json).to.be.eql(msg.data);
-      expect(message.attributes._pattern).to.be.eql(pattern);
+      expect(message.attributes._pattern).to.be.eql(JSON.stringify(pattern));
       expect(message.attributes._id).to.be.not.empty;
     });
   });

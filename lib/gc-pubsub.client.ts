@@ -211,7 +211,7 @@ export class GCPubSubClient extends ClientProxy {
 
       const attributes = {
         _replyTo: this.replyTopicName,
-        _pattern: this.getRequestPattern(packet.pattern),
+        _pattern: JSON.stringify(this.getRequestPattern(packet.pattern)),
         _id: packet.id,
         _clientId: this.clientId,
         ...(serializedPacket.json?.attributes &&

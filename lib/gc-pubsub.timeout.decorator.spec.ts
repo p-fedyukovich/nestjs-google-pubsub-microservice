@@ -9,7 +9,7 @@ import sinon = require('sinon');
 describe('TimeoutInterceptor', () => {
   let server: any;
   let app: INestApplication;
-  let clock = sinon.useFakeTimers();
+  const clock = sinon.useFakeTimers();
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       controllers: [GCPubSubTimeoutController],

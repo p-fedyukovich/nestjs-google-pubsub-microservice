@@ -6,9 +6,13 @@ export class GCPubSubMessage<TData = any, TAttrs = any> {
   ) {}
 }
 
+type Stringify<T> = {
+  [K in keyof T]: T[K] extends string ? T[K] : never;
+};
+
 export class GCPubSubMessageBuilder<
   TData,
-  TAttrs extends Record<string, string>,
+  TAttrs extends Stringify<TAttrs> = Record<string, string>,
 > {
   constructor(
     private data?: TData,

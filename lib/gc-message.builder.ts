@@ -41,7 +41,7 @@ export class GCPubSubMessageBuilder<
     if (!this.data) throw new Error('Missing Data');
     if (this.timeout < 0) throw new Error('Invalid Timeout Value');
     else if (this.timeout > 0)
-      (this.attributes as any).timeout = String(this.timeout);
+      (this.attributes as any)._timeout = String(this.timeout);
     return new GCPubSubMessage<TData, TAttrs>(
       this.data,
       this.attributes as TAttrs,

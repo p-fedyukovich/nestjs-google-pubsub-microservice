@@ -99,7 +99,6 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     } else if (this.checkExistence) {
       const [exists] = await topic.exists();
       if (!exists) {
-        console.log('inside');
         const message = `PubSub server is not started: topic ${this.topicName} does not exist`;
         this.logger.error(message);
         throw new Error(message);
@@ -168,7 +167,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     const rawMessage = JSON.parse(data.toString());
     const now = new Date();
 
-    let packet = this.deserializer.deserialize({
+    const packet = this.deserializer.deserialize({
       data: rawMessage,
       id: attributes._id,
       pattern: attributes._pattern,
@@ -180,7 +179,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
     const correlationId = packet.id;
 
-    const timeout: number = +attributes.timeout;
+    const timeout: number = +attributes._timeout;
     if (timeout && timeout > 0) {
       if (now.getTime() - publishTime.getTime() >= timeout) {
         const timeoutPacket = {

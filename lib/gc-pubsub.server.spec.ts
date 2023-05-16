@@ -238,7 +238,7 @@ describe('GCPubSubServer', () => {
           _id: '3',
           _pattern: 'test',
           _clientId: '4',
-          timeout: '4000',
+          _timeout: '4000',
         },
         id: 'id',
         received: 0,

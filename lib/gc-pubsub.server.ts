@@ -34,6 +34,7 @@ import {
   GC_PUBSUB_DEFAULT_SUBSCRIPTION,
   GC_PUBSUB_DEFAULT_TOPIC,
   GC_PUBSUB_DEFAULT_CHECK_EXISTENCE,
+  GC_AUTO_DELETE_SUBCRIPTION_ON_SHUTDOWN,
 } from './gc-pubsub.constants';
 import { GCPubSubContext } from './gc-pubsub.context';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
@@ -51,6 +52,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   protected readonly init: boolean;
   protected readonly checkExistence: boolean;
   protected readonly createSubscriptionOptions: CreateSubscriptionOptions;
+  protected readonly autoDeleteSubscriptionOnShutdown: boolean;
 
   protected client: PubSub | null = null;
   protected subscription: Subscription | null = null;
@@ -79,6 +81,10 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     this.createSubscriptionOptions = this.options.createSubscriptionOptions;
 
     this.replyTopics = new Set();
+
+    this.autoDeleteSubscriptionOnShutdown =
+      this.options.autoDeleteSubscriptionOnShutdown ||
+      GC_AUTO_DELETE_SUBCRIPTION_ON_SHUTDOWN;
 
     this.initializeSerializer(options);
     this.initializeDeserializer(options);
@@ -134,6 +140,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
   public async close() {
     await closeSubscription(this.subscription);
+    if (this.autoDeleteSubscriptionOnShutdown) await this.subscription.delete();
 
     await Promise.all(
       Array.from(this.replyTopics.values()).map((replyTopic) => {
@@ -213,7 +220,6 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
     const publish = <T>(data: T) =>
       this.sendMessage(data, attributes._replyTo, correlationId, attributes);
-
     response$ && this.send(response$, publish);
   }
 

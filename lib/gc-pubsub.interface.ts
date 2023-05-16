@@ -18,4 +18,5 @@ export interface GCPubSubOptions {
   deserializer?: Deserializer;
   createSubscriptionOptions?: CreateSubscriptionOptions;
   autoResume?: boolean;
+  autoDeleteSubscriptionOnShutdown?: boolean;
 }

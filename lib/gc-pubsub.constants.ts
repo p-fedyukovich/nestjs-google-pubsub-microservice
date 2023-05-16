@@ -11,3 +11,4 @@ export const ALREADY_EXISTS = 6;
 export const GC_PUBSUB_DEFAULT_AUTO_RESUME = false;
 export const GC_PUBSUB_DEFAULT_CREATE_SUBSCRIPTION_COMMIT = {};
 export const GC_PUBSUB_CLIENT_PREFIX = 'gcpubsubclient:';
+export const GC_AUTO_DELETE_SUBCRIPTION_ON_SHUTDOWN = false;

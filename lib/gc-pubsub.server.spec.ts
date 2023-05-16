@@ -166,6 +166,19 @@ describe('GCPubSubServer', () => {
     it('should close() pubsub', () => {
       expect(pubsub.close.called).to.be.true;
     });
+
+    describe('autoDeleteSubscriptionOnClose is true', () => {
+      beforeEach(async () => {
+        server = getInstance({
+          autoDeleteSubscriptionOnShutdown: true,
+        });
+        await server.listen(() => {});
+        await server.close();
+      });
+      it('should delete subscription on close', () => {
+        expect(subscriptionMock.delete.calledOnce).to.be.true;
+      });
+    });
   });
 
   describe('handleMessage', () => {
@@ -335,6 +348,7 @@ describe('GCPubSubServer', () => {
       close: sandbox.stub().callsFake((callback) => callback()),
       on: sandbox.stub().returnsThis(),
       exists: sandbox.stub().resolves([true]),
+      delete: sandbox.stub().resolves(),
     };
 
     topicMock = {

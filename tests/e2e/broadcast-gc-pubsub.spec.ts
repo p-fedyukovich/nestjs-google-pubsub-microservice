@@ -3,10 +3,28 @@ import { INestApplication } from '@nestjs/common';
 import { GCPubSubBroadcastController } from '../src/gc-pubsub-broadcast.controller';
 import { Test } from '@nestjs/testing';
 import * as request from 'supertest';
-
+const Emulator = require('google-pubsub-emulator');
 describe('GC PubSub transport', () => {
   let server;
   let app: INestApplication;
+
+  const projectId = 'test-project-id';
+  const emulatorPort = 8086;
+  const emulatorEndpoint = `localhost`;
+  let emulator;
+  beforeAll(() => {
+    emulator = new Emulator({
+      project: projectId,
+      host: emulatorEndpoint,
+      port: emulatorPort,
+      deubg: true,
+    });
+    return emulator.start();
+  });
+
+  afterAll(() => {
+    return emulator.stop();
+  });
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -21,9 +39,10 @@ describe('GC PubSub transport', () => {
         topic: 'broadcast',
         subscription: 'broadcast_subscription_1',
         client: {
-          apiEndpoint: 'localhost:8681',
-          projectId: 'microservice',
+          apiEndpoint: 'localhost:8086',
+          projectId: 'test-project-id',
         },
+        init: true,
       }),
     });
     app.connectMicroservice({
@@ -31,9 +50,10 @@ describe('GC PubSub transport', () => {
         topic: 'broadcast',
         subscription: 'broadcast_subscription_2',
         client: {
-          apiEndpoint: 'localhost:8681',
-          projectId: 'microservice',
+          apiEndpoint: 'localhost:8086',
+          projectId: 'test-project-id',
         },
+        init: true,
       }),
     });
     await app.startAllMicroservices();

@@ -23,12 +23,14 @@ export class GCPubSubController implements OnApplicationShutdown {
 
   constructor() {
     this.client = new GCPubSubClient({
+      topic: 'broadcast',
+      subscription: 'test-sub',
+      replyTopic: 'test_reply',
+      replySubscription: 'test_reply-sub',
       client: {
-        apiEndpoint: 'localhost:8681',
-        projectId: 'microservice',
+        apiEndpoint: 'localhost:8086',
+        projectId: 'test-project-id',
       },
-      replyTopic: 'default_reply_topic',
-      replySubscription: 'default_reply_subscription',
     });
   }
 

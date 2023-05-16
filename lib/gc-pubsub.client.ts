@@ -47,15 +47,14 @@ export class GCPubSubClient extends ClientProxy {
   protected readonly noAck: boolean;
   protected readonly autoResume: boolean;
 
-  protected client: PubSub | null = null;
-  protected replySubscription: Subscription | null = null;
-  protected topic: Topic | null = null;
+  public client: PubSub | null = null;
+  public replySubscription: Subscription | null = null;
+  public topic: Topic | null = null;
   protected init: boolean;
   protected readonly checkExistence: boolean;
 
   constructor(protected readonly options: GCPubSubOptions) {
     super();
-
     this.clientId = randomUUID();
 
     this.clientConfig = this.options.client || GC_PUBSUB_DEFAULT_CLIENT_CONFIG;
@@ -252,7 +251,7 @@ export class GCPubSubClient extends ClientProxy {
       rawMessage,
     ) as IncomingResponse;
 
-    const correlationId = message.attributes.id || id;
+    const correlationId = message.attributes._id || id;
 
     const callback = this.routingMap.get(correlationId);
     if (!callback) {
@@ -271,7 +270,6 @@ export class GCPubSubClient extends ClientProxy {
         response,
       });
     }
-
     return true;
   }
 

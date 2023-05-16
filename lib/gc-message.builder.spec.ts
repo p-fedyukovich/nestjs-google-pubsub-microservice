@@ -37,7 +37,7 @@ describe('GCPubSubMessageBuilder', () => {
 
     const message = builder.build();
 
-    expect((message.attributes as any).timeout).to.equal(500);
+    expect((message.attributes as any).timeout).to.equal('500');
   });
 
   it('should assign timeout attribute to attributes if timeout is set and attributes are empty', () => {
@@ -46,7 +46,7 @@ describe('GCPubSubMessageBuilder', () => {
 
     const message = builder.build();
 
-    expect((message.attributes as any).timeout).to.equal(500);
+    expect((message.attributes as any).timeout).to.equal('500');
   });
 
   it('should throw an error if timeout is negative', () => {

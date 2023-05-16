@@ -24,7 +24,6 @@ import {
   GC_PUBSUB_DEFAULT_PUBLISHER_CONFIG,
   GC_PUBSUB_DEFAULT_SUBSCRIBER_CONFIG,
   GC_PUBSUB_DEFAULT_TOPIC,
-  GC_PUBSUB_DEFAULT_USE_ATTRIBUTES,
   GC_PUBSUB_DEFAULT_CHECK_EXISTENCE,
   GC_PUBSUB_DEFAULT_AUTO_RESUME,
 } from './gc-pubsub.constants';
@@ -46,16 +45,16 @@ export class GCPubSubClient extends ClientProxy {
   protected readonly clientConfig: ClientConfig;
   protected readonly subscriberConfig: SubscriberOptions;
   protected readonly noAck: boolean;
+  protected readonly autoResume: boolean;
 
-  protected client: PubSub | null = null;
-  protected replySubscription: Subscription | null = null;
-  protected topic: Topic | null = null;
+  public client: PubSub | null = null;
+  public replySubscription: Subscription | null = null;
+  public topic: Topic | null = null;
   protected init: boolean;
   protected readonly checkExistence: boolean;
 
   constructor(protected readonly options: GCPubSubOptions) {
     super();
-
     this.clientId = randomUUID();
 
     this.clientConfig = this.options.client || GC_PUBSUB_DEFAULT_CLIENT_CONFIG;
@@ -76,6 +75,7 @@ export class GCPubSubClient extends ClientProxy {
     this.init = this.options.init ?? GC_PUBSUB_DEFAULT_INIT;
     this.checkExistence =
       this.options.checkExistence ?? GC_PUBSUB_DEFAULT_CHECK_EXISTENCE;
+    this.autoResume = this.options.autoResume ?? GC_PUBSUB_DEFAULT_AUTO_RESUME;
 
     this.initializeSerializer(options);
     this.initializeDeserializer(options);
@@ -83,10 +83,6 @@ export class GCPubSubClient extends ClientProxy {
 
   public getRequestPattern(pattern: string): string {
     return pattern;
-  }
-
-  public getResponsePattern(pattern: string): string {
-    return `${pattern}/reply`;
   }
 
   public async close(): Promise<void> {
@@ -130,7 +126,6 @@ export class GCPubSubClient extends ClientProxy {
           throw new Error(message);
         }
       }
-
       this.replySubscription = replyTopic.subscription(
         this.replySubscriptionName,
         this.subscriberConfig,
@@ -189,8 +184,8 @@ export class GCPubSubClient extends ClientProxy {
     }) as GCPubSubMessage;
 
     const attributes = {
-      replyTo: this.replyTopicName,
-      pattern: this.getRequestPattern(packet.pattern),
+      _replyTo: this.replyTopicName,
+      _pattern: this.getRequestPattern(packet.pattern),
       ...(serializedPacket.json?.attributes &&
         serializedPacket.json?.attributes),
     };
@@ -201,7 +196,6 @@ export class GCPubSubClient extends ClientProxy {
       attributes: attributes,
     });
   }
-
   protected publish(
     partialPacket: ReadPacket,
     callback: (packet: WritePacket) => void,
@@ -212,16 +206,13 @@ export class GCPubSubClient extends ClientProxy {
       const serializedPacket = this.serializer.serialize(
         packet,
       ) as GCPubSubMessage;
-
       const attributes = {
-        replyTo: this.replyTopicName,
-        pattern: this.getRequestPattern(packet.pattern),
-        id: packet.id,
-        clientId: this.clientId,
-        ...(serializedPacket.json?.attributes &&
-          serializedPacket.json?.attributes),
+        _replyTo: this.replyTopicName,
+        _pattern: JSON.stringify(this.getRequestPattern(packet.pattern)),
+        _id: packet.id,
+        _clientId: this.clientId,
+        ...(serializedPacket.attributes && serializedPacket.attributes),
       };
-
       this.routingMap.set(packet.id, callback);
       if (this.topic) {
         this.topic
@@ -231,6 +222,9 @@ export class GCPubSubClient extends ClientProxy {
             attributes: attributes,
           })
           .catch((err) => {
+            if (this.autoResume && serializedPacket.orderingKey) {
+              this.topic.resumePublishing(serializedPacket.orderingKey);
+            }
             callback({ err });
           });
       } else {
@@ -257,7 +251,7 @@ export class GCPubSubClient extends ClientProxy {
       rawMessage,
     ) as IncomingResponse;
 
-    const correlationId = message.attributes.id || id;
+    const correlationId = message.attributes._id || id;
 
     const callback = this.routingMap.get(correlationId);
     if (!callback) {
@@ -276,7 +270,6 @@ export class GCPubSubClient extends ClientProxy {
         response,
       });
     }
-
     return true;
   }
 

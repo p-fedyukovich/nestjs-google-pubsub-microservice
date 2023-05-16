@@ -166,6 +166,19 @@ describe('GCPubSubServer', () => {
     it('should close() pubsub', () => {
       expect(pubsub.close.called).to.be.true;
     });
+
+    describe('autoDeleteSubscriptionOnClose is true', () => {
+      beforeEach(async () => {
+        server = getInstance({
+          autoDeleteSubscriptionOnShutdown: true,
+        });
+        await server.listen(() => {});
+        await server.close();
+      });
+      it('should delete subscription on close', () => {
+        expect(subscriptionMock.delete.calledOnce).to.be.true;
+      });
+    });
   });
 
   describe('handleMessage', () => {
@@ -178,10 +191,10 @@ describe('GCPubSubServer', () => {
       // @ts-ignore
       publishTime: new Date(),
       attributes: {
-        replyTo: 'replyTo',
-        id: '3',
-        pattern: 'test',
-        clientId: '4',
+        _replyTo: 'replyTo',
+        _id: '3',
+        _pattern: 'test',
+        _clientId: '4',
       },
       id: 'id',
       received: 0,
@@ -203,13 +216,50 @@ describe('GCPubSubServer', () => {
       expect(
         topicMock.publishMessage.calledWith({
           json: {
-            id: messageOptions.attributes.id,
+            id: messageOptions.attributes._id,
             status: 'error',
             err: NO_MESSAGE_HANDLER,
           },
           attributes: {
-            id: messageOptions.attributes.id,
+            id: messageOptions.attributes._id,
             ...messageOptions.attributes,
+          },
+        }),
+      ).to.be.true;
+    });
+
+    it('should send TIMEOUT_ERROR_HANDLER if the message is timed out', async () => {
+      const timeoutMessageOptions: Message = {
+        ackId: 'id',
+        // @ts-ignore
+        publishTime: new Date(Date.now() - 5000),
+        attributes: {
+          _replyTo: 'replyTo',
+          _id: '3',
+          _pattern: 'test',
+          _clientId: '4',
+          _timeout: '4000',
+        },
+        id: 'id',
+        received: 0,
+        deliveryAttempt: 1,
+        ack: () => {},
+        modAck: () => {},
+        nack: () => {},
+        data: Buffer.from(JSON.stringify(msg)),
+      };
+      await server.handleMessage(timeoutMessageOptions);
+
+      expect(
+        topicMock.publishMessage.calledWith({
+          json: {
+            id: timeoutMessageOptions.attributes._id,
+            status: 'error',
+            err: 'Message Timeout',
+          },
+          attributes: {
+            id: timeoutMessageOptions.attributes._id,
+            ...timeoutMessageOptions.attributes,
           },
         }),
       ).to.be.true;
@@ -218,7 +268,7 @@ describe('GCPubSubServer', () => {
     it('should call handler if exists in handlers object', async () => {
       const handler = sinon.spy();
       (server as any).messageHandlers = objectToMap({
-        [messageOptions.attributes.pattern]: handler as any,
+        [messageOptions.attributes._pattern]: handler as any,
       });
       await server.handleMessage(messageOptions);
       expect(handler.calledOnce).to.be.true;
@@ -298,6 +348,7 @@ describe('GCPubSubServer', () => {
       close: sandbox.stub().callsFake((callback) => callback()),
       on: sandbox.stub().returnsThis(),
       exists: sandbox.stub().resolves([true]),
+      delete: sandbox.stub().resolves(),
     };
 
     topicMock = {

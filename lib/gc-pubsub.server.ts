@@ -34,6 +34,7 @@ import {
   GC_PUBSUB_DEFAULT_SUBSCRIPTION,
   GC_PUBSUB_DEFAULT_TOPIC,
   GC_PUBSUB_DEFAULT_CHECK_EXISTENCE,
+  GC_AUTO_DELETE_SUBCRIPTION_ON_SHUTDOWN,
 } from './gc-pubsub.constants';
 import { GCPubSubContext } from './gc-pubsub.context';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
@@ -51,9 +52,10 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   protected readonly init: boolean;
   protected readonly checkExistence: boolean;
   protected readonly createSubscriptionOptions: CreateSubscriptionOptions;
+  protected readonly autoDeleteSubscriptionOnShutdown: boolean;
 
-  protected client: PubSub | null = null;
-  protected subscription: Subscription | null = null;
+  public client: PubSub | null = null;
+  public subscription: Subscription | null = null;
 
   constructor(protected readonly options: GCPubSubOptions) {
     super();
@@ -79,6 +81,10 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     this.createSubscriptionOptions = this.options.createSubscriptionOptions;
 
     this.replyTopics = new Set();
+
+    this.autoDeleteSubscriptionOnShutdown =
+      this.options.autoDeleteSubscriptionOnShutdown ??
+      GC_AUTO_DELETE_SUBCRIPTION_ON_SHUTDOWN;
 
     this.initializeSerializer(options);
     this.initializeDeserializer(options);
@@ -127,13 +133,23 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
           message.ack();
         }
       })
-      .on(ERROR_EVENT, (err: any) => this.logger.error(err));
+      .on(ERROR_EVENT, (err: any) => {
+        this.logger.error(err);
+      });
 
     callback();
   }
 
   public async close() {
-    await closeSubscription(this.subscription);
+    if (this.autoDeleteSubscriptionOnShutdown) {
+      try {
+        await this.subscription.delete();
+      } catch {
+        await closeSubscription(this.subscription);
+      }
+    } else {
+      await closeSubscription(this.subscription);
+    }
 
     await Promise.all(
       Array.from(this.replyTopics.values()).map((replyTopic) => {
@@ -147,19 +163,38 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   }
 
   public async handleMessage(message: Message) {
-    const { data, attributes } = message;
+    const { data, attributes, publishTime } = message;
     const rawMessage = JSON.parse(data.toString());
+    const now = new Date();
 
-    let packet = this.deserializer.deserialize({
+    const packet = this.deserializer.deserialize({
       data: rawMessage,
-      id: attributes.id,
-      pattern: attributes.pattern,
+      id: attributes._id,
+      pattern: attributes._pattern,
     }) as IncomingRequest;
 
     const pattern = isString(packet.pattern)
       ? packet.pattern
       : JSON.stringify(packet.pattern);
+
     const correlationId = packet.id;
+
+    const timeout: number = +attributes._timeout;
+    if (timeout && timeout > 0) {
+      if (now.getTime() - publishTime.getTime() >= timeout) {
+        const timeoutPacket = {
+          id: correlationId,
+          status: 'error',
+          err: 'Message Timeout',
+        };
+        return this.sendMessage(
+          timeoutPacket,
+          attributes._replyTo,
+          correlationId,
+          attributes,
+        );
+      }
+    }
 
     const context = new GCPubSubContext([message, pattern]);
 
@@ -170,7 +205,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     const handler = this.getHandlerByPattern(pattern);
 
     if (!handler) {
-      if (!attributes.replyTo) {
+      if (!attributes._replyTo) {
         return;
       }
 
@@ -182,7 +217,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
       };
       return this.sendMessage(
         noHandlerPacket,
-        attributes.replyTo,
+        attributes._replyTo,
         correlationId,
         attributes,
       );
@@ -193,8 +228,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     ) as Observable<any>;
 
     const publish = <T>(data: T) =>
-      this.sendMessage(data, attributes.replyTo, correlationId, attributes);
-
+      this.sendMessage(data, attributes._replyTo, correlationId, attributes);
     response$ && this.send(response$, publish);
   }
 

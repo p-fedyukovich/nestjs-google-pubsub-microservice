@@ -4,10 +4,30 @@ import { expect } from 'chai';
 import * as request from 'supertest';
 import { GCPubSubServer } from '../../lib';
 import { GCPubSubController } from '../src/gc-pubsub.controller';
+const Emulator = require('google-pubsub-emulator');
 
 describe('GC PubSub transport', () => {
   let server;
   let app: INestApplication;
+
+  const projectId = 'test-project-id';
+  const emulatorPort = 8086;
+  const emulatorEndpoint = `localhost`;
+  let emulator;
+  beforeAll(() => {
+    emulator = new Emulator({
+      project: projectId,
+      host: emulatorEndpoint,
+      port: emulatorPort,
+      deubg: true,
+      topics: ['broadcast', 'test-reply'],
+    });
+    return emulator.start();
+  });
+
+  afterAll(() => {
+    return emulator.stop();
+  });
 
   describe('useAttributes=false', () => {
     beforeEach(async () => {
@@ -21,13 +41,17 @@ describe('GC PubSub transport', () => {
       app.connectMicroservice({
         strategy: new GCPubSubServer({
           client: {
-            apiEndpoint: 'localhost:8681',
-            projectId: 'microservice',
+            apiEndpoint: 'localhost:8086',
+            projectId: 'test-project-id',
           },
+          topic: 'broadcast',
+          subscription: 'test-sub',
+          init: true,
         }),
       });
+
       await app.startAllMicroservices();
-      await app.init();
+      await app.listen(8000);
     });
 
     it(`/POST`, () => {
@@ -105,11 +129,11 @@ describe('GC PubSub transport', () => {
 
       app.connectMicroservice({
         strategy: new GCPubSubServer({
+          topic: 'broadcast',
           client: {
-            apiEndpoint: 'localhost:8681',
-            projectId: 'microservice',
+            apiEndpoint: 'localhost:8086',
+            projectId: 'test-project-id',
           },
-          useAttributes: true,
         }),
       });
       await app.startAllMicroservices();

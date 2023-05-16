@@ -54,8 +54,8 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   protected readonly createSubscriptionOptions: CreateSubscriptionOptions;
   protected readonly autoDeleteSubscriptionOnShutdown: boolean;
 
-  protected client: PubSub | null = null;
-  protected subscription: Subscription | null = null;
+  public client: PubSub | null = null;
+  public subscription: Subscription | null = null;
 
   constructor(protected readonly options: GCPubSubOptions) {
     super();
@@ -83,7 +83,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     this.replyTopics = new Set();
 
     this.autoDeleteSubscriptionOnShutdown =
-      this.options.autoDeleteSubscriptionOnShutdown ||
+      this.options.autoDeleteSubscriptionOnShutdown ??
       GC_AUTO_DELETE_SUBCRIPTION_ON_SHUTDOWN;
 
     this.initializeSerializer(options);
@@ -99,6 +99,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     } else if (this.checkExistence) {
       const [exists] = await topic.exists();
       if (!exists) {
+        console.log('inside');
         const message = `PubSub server is not started: topic ${this.topicName} does not exist`;
         this.logger.error(message);
         throw new Error(message);
@@ -133,14 +134,23 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
           message.ack();
         }
       })
-      .on(ERROR_EVENT, (err: any) => this.logger.error(err));
+      .on(ERROR_EVENT, (err: any) => {
+        this.logger.error(err);
+      });
 
     callback();
   }
 
   public async close() {
-    await closeSubscription(this.subscription);
-    if (this.autoDeleteSubscriptionOnShutdown) await this.subscription.delete();
+    if (this.autoDeleteSubscriptionOnShutdown) {
+      try {
+        await this.subscription.delete();
+      } catch {
+        await closeSubscription(this.subscription);
+      }
+    } else {
+      await closeSubscription(this.subscription);
+    }
 
     await Promise.all(
       Array.from(this.replyTopics.values()).map((replyTopic) => {

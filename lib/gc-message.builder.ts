@@ -6,7 +6,10 @@ export class GCPubSubMessage<TData = any, TAttrs = any> {
   ) {}
 }
 
-export class GCPubSubMessageBuilder<TData, TAttrs extends {}> {
+export class GCPubSubMessageBuilder<
+  TData,
+  TAttrs extends Record<string, string>,
+> {
   constructor(
     private data?: TData,
     private attributes: Partial<TAttrs> = {},

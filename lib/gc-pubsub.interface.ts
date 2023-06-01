@@ -13,6 +13,7 @@ export interface GCPubSubOptions {
   init?: boolean;
   useAttributes?: boolean;
   checkExistence?: boolean;
+  scopedEnvKey?: string | null;
   publisher?: PublishOptions;
   subscriber?: SubscriberOptions;
   serializer?: Serializer;

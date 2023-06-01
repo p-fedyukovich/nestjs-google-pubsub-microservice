@@ -48,6 +48,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   protected readonly replyTopics: Set<string>;
   protected readonly init: boolean;
   protected readonly checkExistence: boolean;
+  protected readonly scopedEnvKey: string | null;
 
   protected client: PubSub | null = null;
   protected subscription: Subscription | null = null;
@@ -56,11 +57,19 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     super();
 
     this.clientConfig = this.options.client || GC_PUBSUB_DEFAULT_CLIENT_CONFIG;
-
+    this.scopedEnvKey = this.options.scopedEnvKey ?? null;
     this.topicName = this.options.topic || GC_PUBSUB_DEFAULT_TOPIC;
+
+    if (this.scopedEnvKey) {
+      this.topicName = `${this.scopedEnvKey}${this.topicName}`;
+    }
 
     this.subscriptionName =
       this.options.subscription || GC_PUBSUB_DEFAULT_SUBSCRIPTION;
+
+    if (this.scopedEnvKey) {
+      this.subscriptionName = `${this.scopedEnvKey}${this.subscriptionName}`;
+    }
 
     this.subscriberConfig =
       this.options.subscriber || GC_PUBSUB_DEFAULT_SUBSCRIBER_CONFIG;
@@ -204,6 +213,10 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     const outgoingResponse = this.serializer.serialize(
       message as unknown as OutgoingResponse,
     );
+
+    if (this.scopedEnvKey) {
+      replyTo = `${this.scopedEnvKey}${replyTo}`;
+    }
 
     this.replyTopics.add(replyTo);
 

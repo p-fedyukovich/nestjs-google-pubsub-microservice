@@ -20,6 +20,27 @@ describe('GCPubSubClient', () => {
     sandbox.restore();
   });
 
+  describe('constructor', () => {
+    describe('when the scopedEnvKey is defined', () => {
+      beforeEach(() => {
+        client = getInstance({
+          topic: 'topic',
+          replyTopic: 'replyTopic',
+          replySubscription: 'replySubscription',
+          scopedEnvKey: 'my-key',
+        });
+      });
+
+      it('should set the scopedEnvKey on topics and subscriptions', () => {
+        expect(client['topicName']).to.be.eq('my-keytopic');
+        expect(client['replyTopicName']).to.be.eq('my-keyreplyTopic');
+        expect(client['replySubscriptionName']).to.be.eq(
+          'my-keyreplySubscription',
+        );
+      });
+    });
+  });
+
   describe('connect', () => {
     describe('when is not connected', () => {
       describe('when check existence is true', () => {

@@ -4,6 +4,7 @@ import { ALREADY_EXISTS } from './gc-pubsub.constants';
 import { GCPubSubClient } from './gc-pubsub.client';
 import { GCPubSubOptions } from './gc-pubsub.interface';
 import { GCPubSubMessageBuilder } from './gc-message.builder';
+import { CreateSubscriptionOptions } from '@google-cloud/pubsub';
 
 describe('GCPubSubClient', () => {
   let client: GCPubSubClient;
@@ -61,6 +62,72 @@ describe('GCPubSubClient', () => {
 
         it('should call "subscription.on" twice', async () => {
           expect(subscriptionMock.on.callCount).to.eq(2);
+        });
+      });
+
+      describe('when createSubscriptionOptions is provided', () => {
+        const mockCreateSubscriptionOptions: CreateSubscriptionOptions = {
+          messageRetentionDuration: {
+            seconds: 604800, // 7 days
+          },
+          pushEndpoint: 'https://example.com/push',
+          oidcToken: {
+            serviceAccountEmail: 'example@example.com',
+            audience: 'https://example.com',
+          },
+          topic: 'projects/my-project/topics/my-topic',
+          pushConfig: {
+            pushEndpoint: 'https://example.com/push',
+          },
+          ackDeadlineSeconds: 60,
+          retainAckedMessages: true,
+          labels: {
+            env: 'dev',
+            version: '1.0.0',
+          },
+          enableMessageOrdering: false,
+          expirationPolicy: {
+            ttl: {
+              seconds: 86400, // 1 day
+            },
+          },
+          filter: 'attribute.type = "order"',
+          deadLetterPolicy: {
+            deadLetterTopic: 'projects/my-project/topics/my-dead-letter-topic',
+            maxDeliveryAttempts: 5,
+          },
+          retryPolicy: {
+            minimumBackoff: {
+              seconds: 10,
+            },
+            maximumBackoff: {
+              seconds: 300,
+            },
+          },
+          detached: false,
+          enableExactlyOnceDelivery: true,
+          topicMessageRetentionDuration: {
+            seconds: 2592000, // 30 days
+          },
+          state: 'ACTIVE',
+        };
+
+        beforeEach(async () => {
+          client = getInstance({
+            createSubscriptionOptions: mockCreateSubscriptionOptions,
+            replySubscription: 'testSubscription',
+            replyTopic: 'testTopic',
+            checkExistence: true,
+            init: true,
+          });
+          await client.connect();
+        });
+        it('should call "subscription.create" with argument', async () => {
+          // Verify that subscription.create() was called with the correct arguments
+          expect(subscriptionMock.create.calledOnce).to.be.true;
+          expect(
+            subscriptionMock.create.calledWith(mockCreateSubscriptionOptions),
+          ).to.be.true;
         });
       });
 

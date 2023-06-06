@@ -1,5 +1,7 @@
 import {
   ClientConfig,
+  CreateSubscriptionOptions,
+  CreateSubscriptionResponse,
   Message,
   PubSub,
   Subscription,
@@ -26,6 +28,7 @@ import {
   GC_PUBSUB_DEFAULT_TOPIC,
   GC_PUBSUB_DEFAULT_CHECK_EXISTENCE,
   GC_PUBSUB_DEFAULT_AUTO_RESUME,
+  GC_PUBSUB_DEFAULT_CREATE_SUBSCRIPTION_OPTIONS,
 } from './gc-pubsub.constants';
 import { GCPubSubOptions } from './gc-pubsub.interface';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
@@ -46,6 +49,7 @@ export class GCPubSubClient extends ClientProxy {
   protected readonly subscriberConfig: SubscriberOptions;
   protected readonly noAck: boolean;
   protected readonly autoResume: boolean;
+  protected readonly createSubscriptionOptions: CreateSubscriptionOptions;
 
   public client: PubSub | null = null;
   public replySubscription: Subscription | null = null;
@@ -76,6 +80,9 @@ export class GCPubSubClient extends ClientProxy {
     this.checkExistence =
       this.options.checkExistence ?? GC_PUBSUB_DEFAULT_CHECK_EXISTENCE;
     this.autoResume = this.options.autoResume ?? GC_PUBSUB_DEFAULT_AUTO_RESUME;
+    this.createSubscriptionOptions =
+      this.options.createSubscriptionOptions ??
+      GC_PUBSUB_DEFAULT_CREATE_SUBSCRIPTION_OPTIONS;
 
     this.initializeSerializer(options);
     this.initializeDeserializer(options);
@@ -133,7 +140,10 @@ export class GCPubSubClient extends ClientProxy {
 
       if (this.init) {
         await this.createIfNotExists(
-          this.replySubscription.create.bind(this.replySubscription),
+          this.replySubscription.create.bind(
+            this.replySubscription,
+            this.createSubscriptionOptions,
+          ) as () => Promise<CreateSubscriptionResponse>,
         );
       } else if (this.checkExistence) {
         const [exists] = await this.replySubscription.exists();

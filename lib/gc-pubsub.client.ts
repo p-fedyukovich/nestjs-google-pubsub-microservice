@@ -29,6 +29,8 @@ import {
   GC_PUBSUB_DEFAULT_CHECK_EXISTENCE,
   GC_PUBSUB_DEFAULT_AUTO_RESUME,
   GC_PUBSUB_DEFAULT_CREATE_SUBSCRIPTION_OPTIONS,
+  GC_PUBSUB_DEFAULT_CLIENT_ID_FILTER,
+  GC_AUTO_DELETE_SUBCRIPTION_ON_SHUTDOWN,
 } from './gc-pubsub.constants';
 import { GCPubSubOptions } from './gc-pubsub.interface';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
@@ -50,6 +52,8 @@ export class GCPubSubClient extends ClientProxy {
   protected readonly noAck: boolean;
   protected readonly autoResume: boolean;
   protected readonly createSubscriptionOptions: CreateSubscriptionOptions;
+  protected readonly autoDeleteSubscriptionOnShutdown: boolean;
+  protected readonly clientIdFilter: boolean;
 
   public client: PubSub | null = null;
   public replySubscription: Subscription | null = null;
@@ -84,6 +88,13 @@ export class GCPubSubClient extends ClientProxy {
       this.options.createSubscriptionOptions ??
       GC_PUBSUB_DEFAULT_CREATE_SUBSCRIPTION_OPTIONS;
 
+    this.autoDeleteSubscriptionOnShutdown =
+      this.options.autoDeleteSubscriptionOnShutdown ??
+      GC_AUTO_DELETE_SUBCRIPTION_ON_SHUTDOWN;
+
+    this.clientIdFilter =
+      this.options.clientIdFilter ?? GC_PUBSUB_DEFAULT_CLIENT_ID_FILTER;
+
     this.initializeSerializer(options);
     this.initializeDeserializer(options);
   }
@@ -94,7 +105,15 @@ export class GCPubSubClient extends ClientProxy {
 
   public async close(): Promise<void> {
     await flushTopic(this.topic);
-    await closeSubscription(this.replySubscription);
+    if (this.autoDeleteSubscriptionOnShutdown) {
+      try {
+        await this.replySubscription.delete();
+      } catch {
+        await closeSubscription(this.replySubscription);
+      }
+    } else {
+      await closeSubscription(this.replySubscription);
+    }
     await closePubSub(this.client);
     this.client = null;
     this.topic = null;
@@ -140,10 +159,12 @@ export class GCPubSubClient extends ClientProxy {
 
       if (this.init) {
         await this.createIfNotExists(
-          this.replySubscription.create.bind(
-            this.replySubscription,
-            this.createSubscriptionOptions,
-          ) as () => Promise<CreateSubscriptionResponse>,
+          this.replySubscription.create.bind(this.replySubscription, {
+            ...this.createSubscriptionOptions,
+            ...(this.clientIdFilter && {
+              filter: `attributes._clientId = "${this.clientId}" AND (${this.createSubscriptionOptions.filter})`,
+            }),
+          }) as () => Promise<CreateSubscriptionResponse>,
         );
       } else if (this.checkExistence) {
         const [exists] = await this.replySubscription.exists();

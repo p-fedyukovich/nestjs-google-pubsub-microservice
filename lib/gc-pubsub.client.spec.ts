@@ -131,6 +131,75 @@ describe('GCPubSubClient', () => {
         });
       });
 
+      describe('when clientIdFilter is turned on', () => {
+        const mockCreateSubscriptionOptions: CreateSubscriptionOptions = {
+          messageRetentionDuration: {
+            seconds: 604800, // 7 days
+          },
+          pushEndpoint: 'https://example.com/push',
+          oidcToken: {
+            serviceAccountEmail: 'example@example.com',
+            audience: 'https://example.com',
+          },
+          topic: 'projects/my-project/topics/my-topic',
+          pushConfig: {
+            pushEndpoint: 'https://example.com/push',
+          },
+          ackDeadlineSeconds: 60,
+          retainAckedMessages: true,
+          labels: {
+            env: 'dev',
+            version: '1.0.0',
+          },
+          enableMessageOrdering: false,
+          expirationPolicy: {
+            ttl: {
+              seconds: 86400, // 1 day
+            },
+          },
+          filter: 'attribute.type = "order"',
+          deadLetterPolicy: {
+            deadLetterTopic: 'projects/my-project/topics/my-dead-letter-topic',
+            maxDeliveryAttempts: 5,
+          },
+          retryPolicy: {
+            minimumBackoff: {
+              seconds: 10,
+            },
+            maximumBackoff: {
+              seconds: 300,
+            },
+          },
+          detached: false,
+          enableExactlyOnceDelivery: true,
+          topicMessageRetentionDuration: {
+            seconds: 2592000, // 30 days
+          },
+          state: 'ACTIVE',
+        };
+
+        beforeEach(async () => {
+          client = getInstance({
+            createSubscriptionOptions: mockCreateSubscriptionOptions,
+            replySubscription: 'testSubscription',
+            replyTopic: 'testTopic',
+            checkExistence: true,
+            init: true,
+            clientIdFilter: true,
+          });
+          await client.connect();
+        });
+        it('should call subscription.create with client id filter', async () => {
+          // Verify that subscription.create() was called with the correct arguments
+          const expectedArgs: CreateSubscriptionOptions = {
+            ...mockCreateSubscriptionOptions,
+            filter: `attributes._clientId = "123" AND (${mockCreateSubscriptionOptions.filter})`,
+          };
+          expect(subscriptionMock.create.calledOnce).to.be.true;
+          expect(subscriptionMock.create.calledWith(expectedArgs)).to.be.true;
+        });
+      });
+
       describe('when check existence is false', () => {
         beforeEach(async () => {
           client = getInstance({
@@ -359,6 +428,21 @@ describe('GCPubSubClient', () => {
     it('should set "replySubscription" to null', () => {
       expect((client as any).replySubscription).to.be.null;
     });
+
+    describe('autoDeleteSubscriptionOnClose is true', () => {
+      beforeEach(async () => {
+        client = getInstance({
+          autoDeleteSubscriptionOnShutdown: true,
+          replyTopic: 'replyTopic',
+          replySubscription: 'replySubcription',
+        });
+        await client.connect();
+        await client.close();
+      });
+      it('should delete subscription on close', () => {
+        expect(subscriptionMock.delete.calledOnce).to.be.true;
+      });
+    });
   });
 
   describe('dispatchEvent', () => {
@@ -436,11 +520,15 @@ describe('GCPubSubClient', () => {
   function getInstance(options: GCPubSubOptions): GCPubSubClient {
     const client = new GCPubSubClient(options);
 
+    // Override client ID for testing purpose
+    Object.assign(client, { clientId: '123' });
+
     subscriptionMock = {
       create: sandbox.stub().resolves(),
       close: sandbox.stub().callsFake((callback) => callback()),
       on: sandbox.stub().returnsThis(),
       exists: sandbox.stub().resolves([true]),
+      delete: sandbox.stub().resolves(),
     };
 
     topicMock = {
@@ -458,7 +546,6 @@ describe('GCPubSubClient', () => {
     };
 
     createClient = sandbox.stub(client, 'createClient').callsFake(() => pubsub);
-
     return client;
   }
 });

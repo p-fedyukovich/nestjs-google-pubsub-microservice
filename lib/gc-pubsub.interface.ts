@@ -19,4 +19,5 @@ export interface GCPubSubOptions {
   createSubscriptionOptions?: CreateSubscriptionOptions;
   autoResume?: boolean;
   autoDeleteSubscriptionOnShutdown?: boolean;
+  clientIdFilter?: boolean;
 }

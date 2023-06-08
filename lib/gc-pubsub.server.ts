@@ -112,10 +112,9 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
     if (this.init) {
       await this.createIfNotExists(
-        this.subscription.create.bind(
-          this.subscription,
-          this.createSubscriptionOptions,
-        ) as () => Promise<CreateSubscriptionResponse>,
+        this.subscription.create.bind(this.subscription, {
+          ...this.createSubscriptionOptions,
+        }) as () => Promise<CreateSubscriptionResponse>,
       );
     } else if (this.checkExistence) {
       const [exists] = await this.subscription.exists();

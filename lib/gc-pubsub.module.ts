@@ -25,11 +25,11 @@ export interface GCPubSubRegisterClientAsyncOption
   extraProviders?: Provider[];
 }
 
+@Global()
 @Module({
   providers: [TimeoutInterceptor],
   exports: [TimeoutInterceptor],
 })
-@Global()
 export class GCPubSubClientModule {
   static register(options: GCPubSubRegisterClientOptions[]): DynamicModule {
     const clients: any = options.map((option) => {

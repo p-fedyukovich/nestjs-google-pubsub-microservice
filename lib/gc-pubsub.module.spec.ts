@@ -4,6 +4,11 @@ import { expect } from 'chai';
 import { GCPubSubClient } from './gc-pubsub.client';
 import { getGCPubSubClientToken } from './gc-client.inject.decorator';
 
+const removeClientId = (data: any) => {
+  delete data.clientId;
+  return data;
+};
+
 describe('GCPubSubModule', () => {
   let dynamicModule: DynamicModule;
   describe('register', () => {
@@ -31,6 +36,13 @@ describe('GCPubSubModule', () => {
         );
         expect((provider as ValueProvider).useValue).to.be.instanceOf(
           GCPubSubClient,
+        );
+        expect(
+          removeClientId((provider as ValueProvider).useValue),
+        ).to.deep.equal(
+          GCPubSubClientModule['assignOnAppShutdownHook'](
+            removeClientId(new GCPubSubClient({})),
+          ),
         );
       }));
   });

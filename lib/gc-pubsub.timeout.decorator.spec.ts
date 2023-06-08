@@ -26,6 +26,10 @@ describe('TimeoutInterceptor', () => {
     await app.close();
   });
 
+  afterAll(() => {
+    clock.uninstall();
+  });
+
   it('should return 200 when the endpoint finish executing before timeout', () => {
     const req = request(server).get('/');
     clock.tick(200);

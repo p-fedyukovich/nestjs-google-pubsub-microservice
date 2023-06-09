@@ -79,6 +79,9 @@ export class GCPubSubClient extends ClientProxy {
 
     this.replySubscriptionName = this.options.replySubscription;
 
+    if (this.options.appendClientIdToSubscription)
+      this.replySubscriptionName += '-' + this.clientId;
+
     this.noAck = this.options.noAck ?? GC_PUBSUB_DEFAULT_NO_ACK;
     this.init = this.options.init ?? GC_PUBSUB_DEFAULT_INIT;
     this.checkExistence =
@@ -158,11 +161,17 @@ export class GCPubSubClient extends ClientProxy {
       );
 
       if (this.init) {
+        let filterString: string = this.createSubscriptionOptions?.filter ?? '';
+        if (this.clientIdFilter) {
+          const temp = filterString;
+          filterString = `attributes._clientId = "${this.clientId}"`;
+          if (temp !== '') filterString += ` AND (${temp})`;
+        }
         await this.createIfNotExists(
           this.replySubscription.create.bind(this.replySubscription, {
             ...this.createSubscriptionOptions,
             ...(this.clientIdFilter && {
-              filter: `attributes._clientId = "${this.clientId}" AND (${this.createSubscriptionOptions.filter})`,
+              filter: filterString,
             }),
           }) as () => Promise<CreateSubscriptionResponse>,
         );

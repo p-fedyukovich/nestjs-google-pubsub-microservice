@@ -193,10 +193,40 @@ describe('GCPubSubClient', () => {
           // Verify that subscription.create() was called with the correct arguments
           const expectedArgs: CreateSubscriptionOptions = {
             ...mockCreateSubscriptionOptions,
-            filter: `attributes._clientId = "123" AND (${mockCreateSubscriptionOptions.filter})`,
+            filter: `attributes._clientId = "${client.clientId}" AND (${mockCreateSubscriptionOptions.filter})`,
           };
           expect(subscriptionMock.create.calledOnce).to.be.true;
           expect(subscriptionMock.create.calledWith(expectedArgs)).to.be.true;
+        });
+
+        it('should call subscription.create with client id filter with empty filter', async () => {
+          // Verify that subscription.create() was called with the correct arguments
+          client = getInstance({
+            replySubscription: 'testSubscription',
+            replyTopic: 'testTopic',
+            checkExistence: true,
+            init: true,
+            clientIdFilter: true,
+          });
+          await client.connect();
+          const expectedArgs: CreateSubscriptionOptions = {
+            filter: `attributes._clientId = "${client.clientId}"`,
+          };
+          expect(subscriptionMock.create.calledOnce).to.be.true;
+          expect(subscriptionMock.create.calledWith(expectedArgs)).to.be.true;
+        });
+
+        it('should call not subscription.create with client id when clientIdFilter is off', async () => {
+          // Verify that subscription.create() was called with the correct arguments
+          client = getInstance({
+            replySubscription: 'testSubscription',
+            replyTopic: 'testTopic',
+            checkExistence: true,
+            init: true,
+          });
+          await client.connect();
+          expect(subscriptionMock.create.calledOnce).to.be.true;
+          expect(subscriptionMock.create.calledWith()).to.be.true;
         });
       });
 
@@ -249,8 +279,10 @@ describe('GCPubSubClient', () => {
       beforeEach(async () => {
         client = getInstance({
           replyTopic: 'replyTopic',
-          replySubscription: 'replySubcription',
+          replySubscription: 'replySubscription',
+          appendClientIdToSubscription: true,
         });
+        console.log(client);
 
         try {
           client['client'] = pubsub;
@@ -280,6 +312,13 @@ describe('GCPubSubClient', () => {
 
       it('should not call "subscription.on"', async () => {
         expect(subscriptionMock.on.callCount).to.eq(0);
+      });
+      describe('when appendClientIdToSubcription is true', () => {
+        it('should appeand clientId to subscription name', () => {
+          expect(client['replySubscriptionName']).to.equal(
+            `replySubscription-${client.clientId}`,
+          );
+        });
       });
     });
   });
@@ -521,7 +560,7 @@ describe('GCPubSubClient', () => {
     const client = new GCPubSubClient(options);
 
     // Override client ID for testing purpose
-    Object.assign(client, { clientId: '123' });
+    // Object.assign(client, { clientId: '123' });
 
     subscriptionMock = {
       create: sandbox.stub().resolves(),

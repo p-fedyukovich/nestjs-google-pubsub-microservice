@@ -70,10 +70,6 @@ The `options` property is specific to the chosen transporter. The <strong>GCloud
     <td>If <code>false</code>, topics and subscriptions will not be checked, only used. This only applies when <code>init</code> is <code>false</code></td>
   </tr>
   <tr>
-    <td><code>useAttributes</code></td>
-    <td>Only applicable for client. If <code>true</code>, <code>pattern</code> and <code>correlationId</code> will be sent via message attributes. This is useful if message consumer is not NestJs microservice or you have message filtering on subscription</td>
-  </tr>
-  <tr>
     <td><code>client</code></td>
     <td>Additional client options (read more <a href="https://googleapis.dev/nodejs/pubsub/latest/global.html#ClientConfig" rel="nofollow" target="_blank">here</a>)</td>
   </tr>
@@ -85,22 +81,119 @@ The `options` property is specific to the chosen transporter. The <strong>GCloud
     <td><code>subscriber</code></td>
     <td>Additional subscriber options (read more <a href="https://googleapis.dev/nodejs/pubsub/latest/global.html#SubscriberOptions" rel="nofollow" target="_blank">here</a>)</td>
   </tr>
+  <tr>
+    <td><code>createSubscriptionOptions</code></td>
+    <td>Options to create subscription if <code>init</code> is set to <code>true</code> and a subscription is needed to be created (read more <a href="https://googleapis.dev/nodejs/pubsub/latest/google.pubsub.v1.ISubscription.html" rel="nofollow" target="_blank">here</a>)</td>
+  </tr>
+  <tr>
+    <td><code>autoResume</code></td>
+    <td>Automatically resume publishing a message with ordering key if it fails (read more <a href="https://googleapis.dev/nodejs/pubsub/latest/Topic.html#resumePublishing" rel="nofollow" target="_blank">here</a>)</td>
+  </tr>
+  <tr>
+    <td><code>autoDeleteSubscriptionOnShutdown</code></td>
+    <td>Automatically delete the subscription that is connected by the client on shutdown. If the deletion fails, it will close the subscription</td>
+  </tr>
+  <tr>
+    <td><code>clientIdFilter</code></td>
+    <td>Allows a client to only receive the response from its own request</td>
+  </tr>
+  <tr>
+    <td><code>appendClientIdtoSubscription</code></td>
+    <td>Append client id to the name of the subscription on init</td>
+  </tr>
 </table>
 
 #### Client
 
+Client can be instantiated by importing `GCPubSubClientModule` to the root module. The clients can be registered with both the `register` method or the `registerAsync` method via `useFactory`.
 ```typescript
-const client = 
-  new GCPubSubClient({
-      client: {
-        apiEndpoint: 'localhost:8681',
-        projectId: 'microservice',
-      },
-    });
-client
-  .send('pattern', 'Hello world!')
-  .subscribe((response) => console.log(response));
+@Module({
+  imports: [
+    GCPubSubClientModule.register([{
+      name: 'client-1'.
+      config: options
+    }]),
+    GCPubSubClientModule.registerAsync([{
+      name: 'client-2',
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        return this.configService.get('GCPubSubClientOptions')
+      }
+    }])
+  ]
+})
+export class AppModule {}
 ```
+
+The client can then be injected with `@InjectGCPubSubClient` decorator
+
+```typescript  
+@Injectable()
+export class AppService {
+  constructor(
+    @InjectGCPubSubClient('client-1') private readonly client: GCPubSUbCLient
+  ) {}
+}
+```
+
+If the token for the client is needed for tests, the package provides a utility function `getGCPubSubClientToken` to retrive the provider token of the client.
+```typescript
+const token = getGCPubSubClientToken('client-1')
+```
+
+#### Message
+To fully utilize the features provided by Google PubSub, the message needs to be serialized and deserialized in a certain way to ensure the integrity of the data. Therefore, a helper class, `GCPubSubMessageBuilder` is available to build messages with features such as attributes, ordering key and timeouts.
+
+#### GCPubSubMessageBuilder
+<strong>Usage</strong>
+
+```typescript
+this.client.send(
+    'pattern', 
+    new GCPubSubMessageBuilder(data)
+      .setAttributes(attrs)
+      .setOrderingKey('orderingKey')
+      .setTimeout(12000)
+      .build()
+  )
+```
+
+<table>
+  <tr><strong>Constructor &ltTData&gt &ltTAttrs&gt</strong></tr>
+  <tr>
+    <td><code>data?</code></td><td><code>TData</code></td><td>Data of the message payload</td>
+  </tr>
+  <tr>
+    <td><code>attributes?</code></td><td><code>TAttrs</code></td><td>Attributes of the payload</td>
+  </tr>
+  <tr>
+    <td><code>orderingKey?</code></td><td><code>string</code></td><td>Ordering key of the message</td>
+  </tr>
+  <tr>
+    <td><code>timeout?</code></td><td><code>number</code></td><td>Timeout of the message, the request will not be processed if the request exceeds the timeout when it reaches the server</td>
+  </tr>
+</table>
+
+<table>
+  <tr><strong>Methods</strong></tr>
+  <tr>
+    <td><code>setData</code></td><td><code>(data: TData) => this</code></td><td>Setting the data of the message</td>
+  </tr>
+  <tr>
+    <td><code>setAttributes</code></td><td><code>(attributes: TAttrs) => this</code></td><td>Setting the attributes of the payload</td>
+  </tr>
+  <tr>
+    <td><code>setOrderingKey</code></td><td><code>(orderingKey: string) => this</code></td><td>Setting the ordering key of the message</td>
+  </tr>
+  <tr>
+    <td><code>setTimeout</code></td><td><code>(timeout: number) => this</code></td><td>Setting the timeout value of the payload</td>
+  </tr>
+  <tr>
+    <td><code>build</code></td><td><code>() => GCPubSubMessage</code></td><td>Build the message, throws error if data is empty</td>
+  </tr>
+</table>
+
 
 #### Context
 
@@ -147,23 +240,5 @@ getNotifications(@Payload() data: number[], @Ctx() context: GCPubSubContext) {
   const originalMsg = context.getMessage();
 
   originalMsg.ack();
-}
-```
-
-#### Shutdown
-
-Pub/Sub requires a graceful shutdown properly configured in order to work correctly, otherwise some messages acknowledges can be lost. Therefore, don't forget to call client close:
-
-```typescript
-export class GCPubSubController implements OnApplicationShutdown {
-  client: ClientProxy;
-
-  constructor() {
-    this.client = new GCPubSubClient({});
-  }
-
-  onApplicationShutdown() {
-    return this.client.close();
-  }
 }
 ```

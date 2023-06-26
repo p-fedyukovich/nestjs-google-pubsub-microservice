@@ -25,15 +25,18 @@ $ npm i --save @google-cloud/pubsub nestjs-google-pubsub-microservice
 To use the Pub/Sub transporter, pass the following options object to the `createMicroservice()` method:
 
 ```typescript
-const app = await NestFactory.createMicroservice<MicroserviceOptions>(ApplicationModule, {
-  strategy: new GCPubSubServer({
-    topic: 'cats_topic',
-    subscription: 'cats_subscription',
-    client: {
-      projectId: 'microservice',
-    },
-  }),
-});
+const app = await NestFactory.createMicroservice<MicroserviceOptions>(
+  ApplicationModule,
+  {
+    strategy: new GCPubSubServer({
+      topic: 'cats_topic',
+      subscription: 'cats_subscription',
+      client: {
+        projectId: 'microservice',
+      },
+    }),
+  },
+);
 ```
 
 #### Options
@@ -44,7 +47,7 @@ The `options` property is specific to the chosen transporter. The <strong>GCloud
   <tr>
     <td><code>topic</code></td>
     <td>Topic name which your server subscription will belong to</td>
-  </tr>  
+  </tr>
   <tr>
     <td><code>subscription</code></td>
     <td>Subscription name which your server will listen to</td>
@@ -85,18 +88,21 @@ The `options` property is specific to the chosen transporter. The <strong>GCloud
     <td><code>subscriber</code></td>
     <td>Additional subscriber options (read more <a href="https://googleapis.dev/nodejs/pubsub/latest/global.html#SubscriberOptions" rel="nofollow" target="_blank">here</a>)</td>
   </tr>
+  <tr>
+    <td><code>scopedEnvKey</code></td>
+    <td>Scope topics and subscriptions to avoid losing messages when several people are working on the same code base. Will prefixes topics and subscriptions with this key (read more <a href="https://github.com/p-fedyukovich/nestjs-google-pubsub-microservice/pull/29" rel="nofollow" target="_blank">here</a>)</td>
+  </tr>
 </table>
 
 #### Client
 
 ```typescript
-const client = 
-  new GCPubSubClient({
-      client: {
-        apiEndpoint: 'localhost:8681',
-        projectId: 'microservice',
-      },
-    });
+const client = new GCPubSubClient({
+  client: {
+    apiEndpoint: 'localhost:8681',
+    projectId: 'microservice',
+  },
+});
 client
   .send('pattern', 'Hello world!')
   .subscribe((response) => console.log(response));

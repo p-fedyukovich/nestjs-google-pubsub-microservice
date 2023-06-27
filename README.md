@@ -145,7 +145,7 @@ const token = getGCPubSubClientToken('client-1')
 #### Message
 To fully utilize the features provided by Google PubSub, the message needs to be serialized and deserialized in a certain way to ensure the integrity of the data. Therefore, a helper class, `GCPubSubMessageBuilder` is available to build messages with features such as attributes, ordering key and timeouts.
 
-#### GCPubSubMessageBuilder
+##### GCPubSubMessageBuilder
 <strong>Usage</strong>
 
 ```typescript
@@ -160,7 +160,7 @@ this.client.send(
 ```
 
 <table>
-  <tr><strong>Constructor &ltTData&gt &ltTAttrs&gt</strong></tr>
+  <caption><b>Constructor &ltTData&gt &ltTAttrs&gt</b></caption>
   <tr>
     <td><code>data?</code></td><td><code>TData</code></td><td>Data of the message payload</td>
   </tr>
@@ -176,7 +176,7 @@ this.client.send(
 </table>
 
 <table>
-  <tr><strong>Methods</strong></tr>
+  <caption><b>Methods</b></caption>
   <tr>
     <td><code>setData</code></td><td><code>(data: TData) => this</code></td><td>Setting the data of the message</td>
   </tr>

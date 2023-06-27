@@ -187,18 +187,10 @@ export class GCPubSubClient extends ClientProxy {
       this.replySubscription
         .on(MESSAGE_EVENT, async (message: Message) => {
           try {
-            const isHandled = await this.handleResponse(message);
-
-            if (!isHandled) {
-              message.nack();
-            } else if (this.noAck) {
-              message.ack();
-            }
+            await this.handleResponse(message);
+            message.ack();
           } catch (error) {
             this.logger.error(error);
-            if (this.noAck) {
-              message.nack();
-            }
           }
         })
         .on(ERROR_EVENT, (err: any) => this.logger.error(err));

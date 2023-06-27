@@ -14,8 +14,11 @@ describe('GCPubSubClient', () => {
   let createClient: sinon.SinonStub;
   let sandbox: sinon.SinonSandbox;
 
+  let clock: sinon.SinonFakeTimers;
+
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    clock = sandbox.useFakeTimers();
   });
 
   afterEach(() => {
@@ -282,7 +285,6 @@ describe('GCPubSubClient', () => {
           replySubscription: 'replySubscription',
           appendClientIdToSubscription: true,
         });
-        console.log(client);
 
         try {
           client['client'] = pubsub;
@@ -378,6 +380,22 @@ describe('GCPubSubClient', () => {
       expect(message.json).to.be.eql(msg.data);
       expect(message.attributes._pattern).to.be.eql(JSON.stringify(pattern));
       expect(message.attributes._id).to.be.not.empty;
+    });
+
+    it('should setTimeout to delete callback when timeout is provided', () => {
+      // TODO: implement test
+      const message = {
+        data: new GCPubSubMessageBuilder('data')
+          .setOrderingKey('asdf')
+          .setTimeout(500)
+          .build(),
+        pattern: 'test',
+      };
+
+      client['publish'](message, () => {});
+      const routingMapDelete = sinon.spy(client['routingMap'], 'delete');
+      clock.tick(510);
+      expect(routingMapDelete.calledOnce).to.be.true;
     });
   });
 

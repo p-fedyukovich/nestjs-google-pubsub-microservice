@@ -263,6 +263,12 @@ export class GCPubSubClient extends ClientProxy {
         callback({ err: new Error('Topic is not created') });
       }
 
+      if (serializedPacket.attributes._timeout) {
+        setTimeout(() => {
+          this.routingMap.delete(packet.id);
+        }, Number(serializedPacket.attributes._timeout));
+      }
+
       return () => this.routingMap.delete(packet.id);
     } catch (err) {
       callback({ err });

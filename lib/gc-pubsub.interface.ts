@@ -21,4 +21,5 @@ export interface GCPubSubOptions {
   autoDeleteSubscriptionOnShutdown?: boolean;
   clientIdFilter?: boolean;
   appendClientIdToSubscription?: boolean;
+  ackAfterResponse?: boolean;
 }

@@ -6,6 +6,7 @@ import { BaseRpcContext } from '@nestjs/microservices/ctx-host/base-rpc.context'
 import { ALREADY_EXISTS } from './gc-pubsub.constants';
 import { GCPubSubOptions } from './gc-pubsub.interface';
 import { CreateSubscriptionOptions, Message } from '@google-cloud/pubsub';
+import Sinon = require('sinon');
 
 describe('GCPubSubServer', () => {
   let server: GCPubSubServer;
@@ -243,7 +244,7 @@ describe('GCPubSubServer', () => {
         id: 'id',
         received: 0,
         deliveryAttempt: 1,
-        ack: () => {},
+        ack: sinon.stub(),
         modAck: () => {},
         nack: () => {},
         data: Buffer.from(JSON.stringify(msg)),
@@ -263,6 +264,8 @@ describe('GCPubSubServer', () => {
           },
         }),
       ).to.be.true;
+      expect((timeoutMessageOptions.ack as Sinon.SinonStub).calledOnce).to.be
+        .true;
     });
 
     it('should call handler if exists in handlers object', async () => {
@@ -272,6 +275,19 @@ describe('GCPubSubServer', () => {
       });
       await server.handleMessage(messageOptions);
       expect(handler.calledOnce).to.be.true;
+    });
+
+    it('should ack after response if ackAfterResponse is true', async () => {
+      server = getInstance({ ackAfterResponse: true });
+      await server.listen(() => {});
+      await server.close();
+      const handler = sinon.spy();
+      (server as any).messageHandlers = objectToMap({
+        [messageOptions.attributes._pattern]: handler as any,
+      });
+      await server.handleMessage(messageOptions);
+      expect(handler.calledOnce).to.be.true;
+      expect((messageOptions.ack as Sinon.SinonStub).calledOnce);
     });
   });
 

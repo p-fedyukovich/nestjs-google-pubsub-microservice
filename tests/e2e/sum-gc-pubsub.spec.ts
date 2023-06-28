@@ -110,6 +110,7 @@ describe('GC PubSub transport', () => {
       app.connectMicroservice({
         strategy: new GCPubSubServer({
           topic: 'broadcast',
+          subscription: 'test-sub',
           client: {
             apiEndpoint: 'localhost:8085',
             projectId: 'test-project-id',

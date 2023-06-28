@@ -9,7 +9,7 @@ import {
 } from '@google-cloud/pubsub';
 import { PublishOptions } from '@google-cloud/pubsub/build/src/publisher';
 import { SubscriberOptions } from '@google-cloud/pubsub/build/src/subscriber';
-import { Logger } from '@nestjs/common';
+import { Logger, RequestTimeoutException } from '@nestjs/common';
 import {
   ClientProxy,
   IncomingResponse,
@@ -265,7 +265,7 @@ export class GCPubSubClient extends ClientProxy {
 
       if (serializedPacket.attributes._timeout) {
         setTimeout(() => {
-          this.routingMap.delete(packet.id);
+          callback({ err: new RequestTimeoutException('Message Timeout') });
         }, Number(serializedPacket.attributes._timeout));
       }
 
@@ -288,7 +288,6 @@ export class GCPubSubClient extends ClientProxy {
     const { err, response, isDisposed, id } = this.deserializer.deserialize(
       rawMessage,
     ) as IncomingResponse;
-
     const correlationId = message.attributes._id || id;
 
     const callback = this.routingMap.get(correlationId);

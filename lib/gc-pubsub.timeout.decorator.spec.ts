@@ -27,7 +27,7 @@ describe('TimeoutInterceptor', () => {
   });
 
   afterAll(() => {
-    clock.uninstall();
+    clock.restore();
   });
 
   it('should return 200 when the endpoint finish executing before timeout', () => {

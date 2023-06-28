@@ -167,19 +167,6 @@ describe('GCPubSubServer', () => {
     it('should close() pubsub', () => {
       expect(pubsub.close.called).to.be.true;
     });
-
-    describe('autoDeleteSubscriptionOnClose is true', () => {
-      beforeEach(async () => {
-        server = getInstance({
-          autoDeleteSubscriptionOnShutdown: true,
-        });
-        await server.listen(() => {});
-        await server.close();
-      });
-      it('should delete subscription on close', () => {
-        expect(subscriptionMock.delete.calledOnce).to.be.true;
-      });
-    });
   });
 
   describe('handleMessage', () => {
@@ -230,6 +217,8 @@ describe('GCPubSubServer', () => {
     });
 
     it('should send TIMEOUT_ERROR_HANDLER if the message is timed out', async () => {
+      server = getInstance({ noAck: false });
+      await server.listen(() => {});
       const timeoutMessageOptions: Message = {
         ackId: 'id',
         // @ts-ignore

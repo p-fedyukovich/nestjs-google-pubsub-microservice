@@ -34,7 +34,6 @@ import {
   GC_PUBSUB_DEFAULT_SUBSCRIPTION,
   GC_PUBSUB_DEFAULT_TOPIC,
   GC_PUBSUB_DEFAULT_CHECK_EXISTENCE,
-  GC_AUTO_DELETE_SUBCRIPTION_ON_SHUTDOWN,
   GC_PUBSUB_DEFAULT_ACK_AFTER_RESPONSE,
 } from './gc-pubsub.constants';
 import { GCPubSubContext } from './gc-pubsub.context';
@@ -83,10 +82,6 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     this.createSubscriptionOptions = this.options.createSubscriptionOptions;
 
     this.replyTopics = new Set();
-
-    this.autoDeleteSubscriptionOnShutdown =
-      this.options.autoDeleteSubscriptionOnShutdown ??
-      GC_AUTO_DELETE_SUBCRIPTION_ON_SHUTDOWN;
 
     this.ackAfterResponse =
       this.options.ackAfterResponse ?? GC_PUBSUB_DEFAULT_ACK_AFTER_RESPONSE;
@@ -146,15 +141,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   }
 
   public async close() {
-    if (this.autoDeleteSubscriptionOnShutdown) {
-      try {
-        await this.subscription.delete();
-      } catch {
-        await closeSubscription(this.subscription);
-      }
-    } else {
-      await closeSubscription(this.subscription);
-    }
+    await closeSubscription(this.subscription);
 
     await Promise.all(
       Array.from(this.replyTopics.values()).map((replyTopic) => {
@@ -184,7 +171,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
     const correlationId = packet.id;
 
-    const timeout: number = +attributes._timeout;
+    const timeout = Number(attributes._timeout);
     if (timeout && timeout > 0) {
       if (now.getTime() - publishTime.getTime() >= timeout) {
         const timeoutPacket = {
@@ -198,7 +185,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
           correlationId,
           attributes,
         );
-        message.ack();
+        if (!this.noAck) message.ack();
         return;
       }
     }
@@ -228,7 +215,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
         correlationId,
         attributes,
       );
-      message.ack();
+      if (this.noAck) message.ack();
       return;
     }
 
@@ -239,7 +226,9 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     const publish = <T>(data: T) =>
       this.sendMessage(data, attributes._replyTo, correlationId, attributes);
     response$ && this.send(response$, publish);
-    if (this.ackAfterResponse) message.ack();
+    if (this.ackAfterResponse) {
+      message.ack();
+    }
   }
 
   public async sendMessage<T = any>(

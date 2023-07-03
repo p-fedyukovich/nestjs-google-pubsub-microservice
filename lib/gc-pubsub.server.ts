@@ -57,19 +57,15 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     super();
 
     this.clientConfig = this.options.client || GC_PUBSUB_DEFAULT_CLIENT_CONFIG;
-    this.scopedEnvKey = this.options.scopedEnvKey ?? null;
-    this.topicName = this.options.topic || GC_PUBSUB_DEFAULT_TOPIC;
+    this.scopedEnvKey = this.options.scopedEnvKey ?? '';
 
-    if (this.scopedEnvKey) {
-      this.topicName = `${this.scopedEnvKey}${this.topicName}`;
-    }
+    this.topicName = this.options.topic || GC_PUBSUB_DEFAULT_TOPIC;
+    this.topicName = `${this.scopedEnvKey}${this.topicName}`;
 
     this.subscriptionName =
       this.options.subscription || GC_PUBSUB_DEFAULT_SUBSCRIPTION;
 
-    if (this.scopedEnvKey) {
-      this.subscriptionName = `${this.scopedEnvKey}${this.subscriptionName}`;
-    }
+    this.subscriptionName = `${this.scopedEnvKey}${this.subscriptionName}`;
 
     this.subscriberConfig =
       this.options.subscriber || GC_PUBSUB_DEFAULT_SUBSCRIBER_CONFIG;
@@ -214,9 +210,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
       message as unknown as OutgoingResponse,
     );
 
-    if (this.scopedEnvKey) {
-      replyTo = `${this.scopedEnvKey}${replyTo}`;
-    }
+    replyTo = `${this.scopedEnvKey}${replyTo}`;
 
     this.replyTopics.add(replyTo);
 

@@ -46,6 +46,7 @@ export class GCPubSubClient extends ClientProxy {
   protected replySubscription: Subscription | null = null;
   protected topic: Topic | null = null;
   protected init: boolean;
+  protected readonly scopedEnvKey: string | null;
   protected readonly checkExistence: boolean;
 
   constructor(protected readonly options: GCPubSubOptions) {
@@ -53,7 +54,10 @@ export class GCPubSubClient extends ClientProxy {
 
     this.clientConfig = this.options.client || GC_PUBSUB_DEFAULT_CLIENT_CONFIG;
 
+    this.scopedEnvKey = this.options.scopedEnvKey ?? '';
+
     this.topicName = this.options.topic || GC_PUBSUB_DEFAULT_TOPIC;
+    this.topicName = `${this.scopedEnvKey}${this.topicName}`;
 
     this.subscriberConfig =
       this.options.subscriber || GC_PUBSUB_DEFAULT_SUBSCRIBER_CONFIG;
@@ -61,9 +65,9 @@ export class GCPubSubClient extends ClientProxy {
     this.publisherConfig =
       this.options.publisher || GC_PUBSUB_DEFAULT_PUBLISHER_CONFIG;
 
-    this.replyTopicName = this.options.replyTopic;
+    this.replyTopicName = `${this.scopedEnvKey}${this.options.replyTopic}`;
 
-    this.replySubscriptionName = this.options.replySubscription;
+    this.replySubscriptionName = `${this.scopedEnvKey}${this.options.replySubscription}`;
 
     this.noAck = this.options.noAck ?? GC_PUBSUB_DEFAULT_NO_ACK;
     this.init = this.options.init ?? GC_PUBSUB_DEFAULT_INIT;

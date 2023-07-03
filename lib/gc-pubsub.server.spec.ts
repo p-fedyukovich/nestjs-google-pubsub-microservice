@@ -20,6 +20,21 @@ describe('GCPubSubServer', () => {
     sandbox.restore();
   });
 
+  describe('constructor', () => {
+    describe('when the scopedEnvKey is defined', () => {
+      it('should set the scopedEnvKey on topics and subscriptions', () => {
+        const scopedEnvKey = 'my-key';
+
+        server = getInstance({ scopedEnvKey } as GCPubSubOptions);
+
+        expect(server['topicName']).to.eq(`${scopedEnvKey}default_topic`);
+        expect(server['subscriptionName']).to.eq(
+          `${scopedEnvKey}default_subscription`,
+        );
+      });
+    });
+  });
+
   describe('listen', () => {
     describe('when is check existence is true', () => {
       beforeEach(async () => {
@@ -190,6 +205,24 @@ describe('GCPubSubServer', () => {
           },
         }),
       ).to.be.true;
+    });
+
+    describe('when scopedEnvKey is defined', () => {
+      beforeEach(async () => {
+        server = getInstance({ scopedEnvKey: 'my-key' });
+        await server.listen(() => {});
+      });
+
+      it('should set scopedEnvKey on replyTo', async () => {
+        const message = { test: true };
+        const replyTo = 'test';
+        const correlationId = '0';
+
+        await server.sendMessage(message, replyTo, correlationId);
+        expect(Array.from(server['replyTopics'].values())).to.deep.eq([
+          'my-keytest',
+        ]);
+      });
     });
   });
 

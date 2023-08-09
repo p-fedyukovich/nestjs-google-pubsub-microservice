@@ -3,22 +3,16 @@ import { Test } from '@nestjs/testing';
 import { expect } from 'chai';
 import * as request from 'supertest';
 import { GCPubSubServer } from '../../lib';
-import {
-  GCPubSubScopedEnvController1,
-  GCPubSubScopedEnvController2,
-} from '../src/gc-pubsub-scoped-env.controller';
+import { GCPubSubScopedEnvController } from '../src/gc-pubsub-scoped-env.controller';
 
-describe('GC PubSub transport', () => {
+describe('GC PubSub transport: scoped', () => {
   let server;
   let app: INestApplication;
 
   describe('useAttributes=false', () => {
     beforeEach(async () => {
-      await Test.createTestingModule({
-        controllers: [GCPubSubScopedEnvController2],
-      }).compile();
       const module = await Test.createTestingModule({
-        controllers: [GCPubSubScopedEnvController1],
+        controllers: [GCPubSubScopedEnvController],
       }).compile();
 
       app = module.createNestApplication();
@@ -30,7 +24,9 @@ describe('GC PubSub transport', () => {
             apiEndpoint: 'localhost:8681',
             projectId: 'microservice',
           },
-          scopedEnvKey: 'foobar',
+          topic: 'server_topic',
+          subscription: 'server_subscription',
+          scopedEnvKey: 'foobar_',
         }),
       });
       await app.startAllMicroservices();
@@ -38,7 +34,7 @@ describe('GC PubSub transport', () => {
     });
 
     it('/POST', () => {
-      request(server).post('/rpc').expect(200, 'scoped RPC');
+      return request(server).post('/rpc').expect(200, 'scoped RPC');
     });
 
     it('/POST (event notification)', (done) => {
@@ -46,8 +42,7 @@ describe('GC PubSub transport', () => {
         .post('/notify')
         .end(() => {
           setTimeout(() => {
-            expect(GCPubSubScopedEnvController1.IS_NOTIFIED).to.be.true;
-            expect(GCPubSubScopedEnvController2.IS_NOTIFIED).to.be.false;
+            expect(GCPubSubScopedEnvController.IS_NOTIFIED).to.be.true;
             done();
           }, 1000);
         });

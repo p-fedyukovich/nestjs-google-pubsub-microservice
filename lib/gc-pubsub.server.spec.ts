@@ -219,9 +219,7 @@ describe('GCPubSubServer', () => {
         const correlationId = '0';
 
         await server.sendMessage(message, replyTo, correlationId);
-        expect(Array.from(server['replyTopics'].values())).to.deep.eq([
-          'my-keytest',
-        ]);
+        expect(Array.from(server['replyTopics'].values())).to.deep.eq(['test']);
       });
     });
   });

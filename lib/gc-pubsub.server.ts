@@ -1,11 +1,11 @@
 import {
   ClientConfig,
   Message,
+  PublishOptions,
   PubSub,
+  SubscriberOptions,
   Subscription,
 } from '@google-cloud/pubsub';
-import { PublishOptions } from '@google-cloud/pubsub/build/src/publisher';
-import { SubscriberOptions } from '@google-cloud/pubsub/build/src/subscriber';
 import { Observable } from 'rxjs';
 import {
   CustomTransportStrategy,
@@ -209,8 +209,6 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     const outgoingResponse = this.serializer.serialize(
       message as unknown as OutgoingResponse,
     );
-
-    replyTo = `${this.scopedEnvKey}${replyTo}`;
 
     this.replyTopics.add(replyTo);
 

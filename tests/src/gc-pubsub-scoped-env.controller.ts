@@ -10,10 +10,9 @@ import {
   MessagePattern,
 } from '@nestjs/microservices';
 import { GCPubSubClient } from '../../lib';
-import { Observable } from 'rxjs';
 
 @Controller()
-export class GCPubSubScopedEnvController1 implements OnApplicationShutdown {
+export class GCPubSubScopedEnvController implements OnApplicationShutdown {
   static IS_NOTIFIED = false;
 
   client: ClientProxy;
@@ -24,9 +23,10 @@ export class GCPubSubScopedEnvController1 implements OnApplicationShutdown {
         apiEndpoint: 'localhost:8681',
         projectId: 'microservice',
       },
-      replyTopic: 'default_reply_topic',
-      replySubscription: 'default_reply_subscription',
-      scopedEnvKey: 'foobar',
+      replyTopic: 'client_topic',
+      replySubscription: 'client_subscription',
+      topic: 'server_topic',
+      scopedEnvKey: 'foobar_',
     });
   }
 
@@ -34,7 +34,7 @@ export class GCPubSubScopedEnvController1 implements OnApplicationShutdown {
     return this.client.close();
   }
 
-  @Post()
+  @Post('rpc')
   @HttpCode(200)
   call() {
     return this.client.send({ cmd: 'rpc' }, {});
@@ -55,38 +55,6 @@ export class GCPubSubScopedEnvController1 implements OnApplicationShutdown {
 
   @EventPattern('notification')
   eventHandler(data: { notification: boolean; id: string }) {
-    GCPubSubScopedEnvController1.IS_NOTIFIED = data.notification;
-  }
-}
-
-@Controller()
-export class GCPubSubScopedEnvController2 implements OnApplicationShutdown {
-  static IS_NOTIFIED = false;
-
-  client: ClientProxy;
-
-  constructor() {
-    this.client = new GCPubSubClient({
-      client: {
-        apiEndpoint: 'localhost:8681',
-        projectId: 'microservice',
-      },
-      replyTopic: 'default_reply_topic',
-      replySubscription: 'default_reply_subscription',
-    });
-  }
-
-  onApplicationShutdown(signal?: string) {
-    return this.client.close();
-  }
-
-  @MessagePattern({ cmd: 'rpc' })
-  rpc(): string {
-    return 'RPC';
-  }
-
-  @EventPattern('notification')
-  eventHandler(data: { notification: boolean; id: string }) {
-    GCPubSubScopedEnvController2.IS_NOTIFIED = data.notification;
+    GCPubSubScopedEnvController.IS_NOTIFIED = data.notification;
   }
 }

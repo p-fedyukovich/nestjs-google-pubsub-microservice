@@ -1,7 +1,10 @@
-version: "3"
+version: '3.3'
+
 services:
   pubsub:
-    image: messagebird/gcloud-pubsub-emulator:latest
+    image: gcr.io/google.com/cloudsdktool/cloud-sdk:416.0.0-emulators
+    entrypoint: gcloud
+    command: ["beta", "emulators", "pubsub", "start", "--host-port=0.0.0.0:8681"]
     ports:
       - '8681:8681'
     restart: always

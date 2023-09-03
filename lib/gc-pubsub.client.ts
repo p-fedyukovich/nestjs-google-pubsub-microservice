@@ -4,9 +4,9 @@ import {
   PubSub,
   Subscription,
   Topic,
+  PublishOptions,
+  SubscriberOptions,
 } from '@google-cloud/pubsub';
-import { PublishOptions } from '@google-cloud/pubsub/build/src/publisher';
-import { SubscriberOptions } from '@google-cloud/pubsub/build/src/subscriber';
 import { Logger } from '@nestjs/common';
 import {
   ClientProxy,

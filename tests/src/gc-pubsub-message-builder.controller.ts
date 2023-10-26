@@ -6,7 +6,8 @@ import {
   GCPubSubMessageBuilder,
 } from '../../lib';
 import { Ctx, MessagePattern, Payload } from '@nestjs/microservices';
-import { lastValueFrom } from 'rxjs';
+import { catchError, lastValueFrom, take } from 'rxjs';
+import { error } from 'console';
 
 @Controller()
 export class GCPubSubMessageBuilderController {
@@ -63,10 +64,6 @@ export class GCPubSubMessageBuilderController {
 
   @Get('/multiple-client-test')
   async sendMultipleClient() {
-    // console.log({
-    //   clientOneId: this.clientOne.clientId,
-    //   clientTwoId: this.clientTwo.clientId,
-    // });
     return this.clientOne.send(
       { cmd: 'multiple-service' },
       new GCPubSubMessageBuilder({
@@ -78,22 +75,25 @@ export class GCPubSubMessageBuilderController {
 
   @Get('/timeout')
   async timeoutController() {
-    let a: any;
-    try {
-      a = await lastValueFrom(
-        this.clientOne.send(
-          { cmd: 'timeout' },
-          new GCPubSubMessageBuilder({
-            data: 'data',
-          })
-            .setTimeout(1)
-            .build(),
-        ),
+    return this.clientOne
+      .send(
+        { cmd: 'timeoutA' },
+        new GCPubSubMessageBuilder({
+          data: 'data',
+        })
+          .setTimeout(1)
+          .build(),
+      )
+      .pipe(
+        catchError((err) => {
+          if (
+            err === 'Message Timeout' ||
+            err instanceof RequestTimeoutException
+          )
+            throw new RequestTimeoutException(err);
+          throw new Error(err);
+        }),
       );
-    } catch (e) {
-      if (e === 'Message Timeout') throw new RequestTimeoutException();
-    }
-    return a;
   }
 
   @MessagePattern({ cmd: 'data' })
@@ -127,11 +127,6 @@ export class GCPubSubMessageBuilderController {
     @Ctx() context: GCPubSubContext,
   ) {
     const message = context.getMessage();
-    // console.log({ incomingClientId: message.attributes._clientId, ...data });
-    // console.log({
-    //   clientOneId: this.clientOne.clientId,
-    //   clientTwoId: this.clientTwo.clientId,
-    // });
 
     return {
       incomingClientId: message.attributes._clientId,

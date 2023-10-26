@@ -13,7 +13,7 @@ import { GCPubSubMessageBuilderController } from './gc-pubsub-message-builder.co
           replyTopic: 'test_reply',
           replySubscription: 'test_reply-sub',
           client: {
-            apiEndpoint: 'localhost:8086',
+            apiEndpoint: 'localhost:8085',
             projectId: 'test-project-id',
           },
           init: true,
@@ -27,7 +27,7 @@ import { GCPubSubMessageBuilderController } from './gc-pubsub-message-builder.co
           replyTopic: 'test_reply',
           replySubscription: 'test_reply-sub',
           client: {
-            apiEndpoint: 'localhost:8086',
+            apiEndpoint: 'localhost:8085',
             projectId: 'test-project-id',
           },
           init: true,

@@ -326,7 +326,9 @@ describe('GCPubSubClient', () => {
   });
 
   describe('publish', () => {
+    let callback: sinon.SinonSpy;
     beforeEach(() => {
+      callback = sandbox.spy();
       client = getInstance({
         replyTopic: 'replyTopic',
         replySubscription: 'replySubcription',
@@ -382,7 +384,7 @@ describe('GCPubSubClient', () => {
       expect(message.attributes._id).to.be.not.empty;
     });
 
-    it('should setTimeout to delete callback when timeout is provided', () => {
+    it('should setTimeout to call callback with timeout error when timeout is provided', () => {
       // TODO: implement test
       const message = {
         data: new GCPubSubMessageBuilder('data')
@@ -392,10 +394,9 @@ describe('GCPubSubClient', () => {
         pattern: 'test',
       };
 
-      client['publish'](message, () => {});
-      const routingMapDelete = sinon.spy(client['routingMap'], 'delete');
+      client['publish'](message, callback);
       clock.tick(510);
-      expect(routingMapDelete.calledOnce).to.be.true;
+      expect(callback.calledOnce).to.be.true;
     });
   });
 

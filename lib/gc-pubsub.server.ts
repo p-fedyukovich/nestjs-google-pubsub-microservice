@@ -1,5 +1,7 @@
 import {
   ClientConfig,
+  CreateSubscriptionOptions,
+  CreateSubscriptionResponse,
   Message,
   PubSub,
   Subscription,
@@ -32,6 +34,7 @@ import {
   GC_PUBSUB_DEFAULT_SUBSCRIPTION,
   GC_PUBSUB_DEFAULT_TOPIC,
   GC_PUBSUB_DEFAULT_CHECK_EXISTENCE,
+  GC_PUBSUB_DEFAULT_ACK_AFTER_RESPONSE,
 } from './gc-pubsub.constants';
 import { GCPubSubContext } from './gc-pubsub.context';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
@@ -48,9 +51,12 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   protected readonly replyTopics: Set<string>;
   protected readonly init: boolean;
   protected readonly checkExistence: boolean;
+  protected readonly createSubscriptionOptions: CreateSubscriptionOptions;
+  protected readonly autoDeleteSubscriptionOnShutdown: boolean;
+  protected readonly ackAfterResponse: boolean;
 
-  protected client: PubSub | null = null;
-  protected subscription: Subscription | null = null;
+  public client: PubSub | null = null;
+  public subscription: Subscription | null = null;
 
   constructor(protected readonly options: GCPubSubOptions) {
     super();
@@ -73,7 +79,12 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     this.checkExistence =
       this.options.checkExistence ?? GC_PUBSUB_DEFAULT_CHECK_EXISTENCE;
 
+    this.createSubscriptionOptions = this.options.createSubscriptionOptions;
+
     this.replyTopics = new Set();
+
+    this.ackAfterResponse =
+      this.options.ackAfterResponse ?? GC_PUBSUB_DEFAULT_ACK_AFTER_RESPONSE;
 
     this.initializeSerializer(options);
     this.initializeDeserializer(options);
@@ -101,7 +112,10 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
     if (this.init) {
       await this.createIfNotExists(
-        this.subscription.create.bind(this.subscription),
+        this.subscription.create.bind(
+          this.subscription,
+          this.createSubscriptionOptions,
+        ) as () => Promise<CreateSubscriptionResponse>,
       );
     } else if (this.checkExistence) {
       const [exists] = await this.subscription.exists();
@@ -119,7 +133,9 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
           message.ack();
         }
       })
-      .on(ERROR_EVENT, (err: any) => this.logger.error(err));
+      .on(ERROR_EVENT, (err: any) => {
+        this.logger.error(err);
+      });
 
     callback();
   }
@@ -139,24 +155,40 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   }
 
   public async handleMessage(message: Message) {
-    const { data, attributes } = message;
+    const { data, attributes, publishTime } = message;
     const rawMessage = JSON.parse(data.toString());
+    const now = new Date();
 
-    let packet;
-    if (attributes.pattern) {
-      packet = this.deserializer.deserialize({
-        data: rawMessage,
-        id: attributes.id,
-        pattern: attributes.pattern,
-      }) as IncomingRequest;
-    } else {
-      packet = this.deserializer.deserialize(rawMessage) as IncomingRequest;
-    }
+    const packet = this.deserializer.deserialize({
+      data: rawMessage,
+      id: attributes._id,
+      pattern: attributes._pattern,
+    }) as IncomingRequest;
 
     const pattern = isString(packet.pattern)
       ? packet.pattern
       : JSON.stringify(packet.pattern);
+
     const correlationId = packet.id;
+
+    const timeout = Number(attributes._timeout);
+    if (timeout && timeout > 0) {
+      if (now.getTime() - publishTime.getTime() >= timeout) {
+        const timeoutPacket = {
+          id: correlationId,
+          status: 'error',
+          err: 'Message Timeout',
+        };
+        this.sendMessage(
+          timeoutPacket,
+          attributes._replyTo,
+          correlationId,
+          attributes,
+        );
+        if (!this.noAck) message.ack();
+        return;
+      }
+    }
 
     const context = new GCPubSubContext([message, pattern]);
 
@@ -167,7 +199,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     const handler = this.getHandlerByPattern(pattern);
 
     if (!handler) {
-      if (!attributes.replyTo) {
+      if (!attributes._replyTo) {
         return;
       }
 
@@ -177,11 +209,14 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
         status,
         err: NO_MESSAGE_HANDLER,
       };
-      return this.sendMessage(
+      this.sendMessage(
         noHandlerPacket,
-        attributes.replyTo,
+        attributes._replyTo,
         correlationId,
+        attributes,
       );
+      if (this.noAck) message.ack();
+      return;
     }
 
     const response$ = this.transformToObservable(
@@ -189,15 +224,18 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     ) as Observable<any>;
 
     const publish = <T>(data: T) =>
-      this.sendMessage(data, attributes.replyTo, correlationId);
-
+      this.sendMessage(data, attributes._replyTo, correlationId, attributes);
     response$ && this.send(response$, publish);
+    if (this.ackAfterResponse) {
+      message.ack();
+    }
   }
 
   public async sendMessage<T = any>(
     message: T,
     replyTo: string,
     id: string,
+    attributes?: Record<string, string>,
   ): Promise<void> {
     Object.assign(message, { id });
 
@@ -207,9 +245,10 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
     this.replyTopics.add(replyTo);
 
-    await this.client
-      .topic(replyTo, this.publisherConfig)
-      .publishMessage({ json: outgoingResponse, attributes: { id } });
+    await this.client.topic(replyTo, this.publisherConfig).publishMessage({
+      json: outgoingResponse,
+      attributes: { id, ...attributes },
+    });
   }
 
   public async createIfNotExists(create: () => Promise<any>) {

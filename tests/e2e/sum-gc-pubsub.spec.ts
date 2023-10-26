@@ -21,13 +21,17 @@ describe('GC PubSub transport', () => {
       app.connectMicroservice({
         strategy: new GCPubSubServer({
           client: {
-            apiEndpoint: 'localhost:8681',
-            projectId: 'microservice',
+            apiEndpoint: 'localhost:8085',
+            projectId: 'test-project-id',
           },
+          topic: 'broadcast',
+          subscription: 'test-sub',
+          init: true,
         }),
       });
+
       await app.startAllMicroservices();
-      await app.init();
+      await app.listen(8000);
     });
 
     it(`/POST`, () => {
@@ -105,11 +109,12 @@ describe('GC PubSub transport', () => {
 
       app.connectMicroservice({
         strategy: new GCPubSubServer({
+          topic: 'broadcast',
+          subscription: 'test-sub',
           client: {
-            apiEndpoint: 'localhost:8681',
-            projectId: 'microservice',
+            apiEndpoint: 'localhost:8085',
+            projectId: 'test-project-id',
           },
-          useAttributes: true,
         }),
       });
       await app.startAllMicroservices();

@@ -3,6 +3,7 @@ import { MessagePattern, ClientProxy } from '@nestjs/microservices';
 import { Observable } from 'rxjs';
 import { scan, take } from 'rxjs/operators';
 import { GCPubSubClient } from '../../lib';
+import { GCPubSubMessageBuilder } from '../../lib/gc-message.builder';
 
 @Controller()
 export class GCPubSubBroadcastController implements OnApplicationShutdown {
@@ -11,11 +12,12 @@ export class GCPubSubBroadcastController implements OnApplicationShutdown {
   constructor() {
     this.client = new GCPubSubClient({
       topic: 'broadcast',
-      replyTopic: 'default_reply_topic',
-      replySubscription: 'broadcast_reply_subscription',
+      replyTopic: 'test_reply',
+      replySubscription: 'test_reply-sub',
+      subscription: 'test-sub',
       client: {
-        apiEndpoint: 'localhost:8681',
-        projectId: 'microservice',
+        apiEndpoint: 'localhost:8085',
+        projectId: 'test-project-id',
       },
     });
   }
@@ -26,6 +28,12 @@ export class GCPubSubBroadcastController implements OnApplicationShutdown {
 
   @Get('broadcast')
   multicats() {
+    const a = this.client.send<any>(
+      'pattern',
+      new GCPubSubMessageBuilder<{ data: string }, { attrs: string }>({
+        data: 'asfd',
+      }).build(),
+    );
     return this.client.send<number>({ cmd: 'broadcast' }, {}).pipe(
       scan((a, b) => a + b),
       take(2),

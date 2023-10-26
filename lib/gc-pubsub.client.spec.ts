@@ -3,6 +3,8 @@ import * as sinon from 'sinon';
 import { ALREADY_EXISTS } from './gc-pubsub.constants';
 import { GCPubSubClient } from './gc-pubsub.client';
 import { GCPubSubOptions } from './gc-pubsub.interface';
+import { GCPubSubMessageBuilder } from './gc-message.builder';
+import { CreateSubscriptionOptions } from '@google-cloud/pubsub';
 
 describe('GCPubSubClient', () => {
   let client: GCPubSubClient;
@@ -12,8 +14,11 @@ describe('GCPubSubClient', () => {
   let createClient: sinon.SinonStub;
   let sandbox: sinon.SinonSandbox;
 
+  let clock: sinon.SinonFakeTimers;
+
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    clock = sandbox.useFakeTimers();
   });
 
   afterEach(() => {
@@ -60,6 +65,171 @@ describe('GCPubSubClient', () => {
 
         it('should call "subscription.on" twice', async () => {
           expect(subscriptionMock.on.callCount).to.eq(2);
+        });
+      });
+
+      describe('when createSubscriptionOptions is provided', () => {
+        const mockCreateSubscriptionOptions: CreateSubscriptionOptions = {
+          messageRetentionDuration: {
+            seconds: 604800, // 7 days
+          },
+          pushEndpoint: 'https://example.com/push',
+          oidcToken: {
+            serviceAccountEmail: 'example@example.com',
+            audience: 'https://example.com',
+          },
+          topic: 'projects/my-project/topics/my-topic',
+          pushConfig: {
+            pushEndpoint: 'https://example.com/push',
+          },
+          ackDeadlineSeconds: 60,
+          retainAckedMessages: true,
+          labels: {
+            env: 'dev',
+            version: '1.0.0',
+          },
+          enableMessageOrdering: false,
+          expirationPolicy: {
+            ttl: {
+              seconds: 86400, // 1 day
+            },
+          },
+          filter: 'attribute.type = "order"',
+          deadLetterPolicy: {
+            deadLetterTopic: 'projects/my-project/topics/my-dead-letter-topic',
+            maxDeliveryAttempts: 5,
+          },
+          retryPolicy: {
+            minimumBackoff: {
+              seconds: 10,
+            },
+            maximumBackoff: {
+              seconds: 300,
+            },
+          },
+          detached: false,
+          enableExactlyOnceDelivery: true,
+          topicMessageRetentionDuration: {
+            seconds: 2592000, // 30 days
+          },
+          state: 'ACTIVE',
+        };
+
+        beforeEach(async () => {
+          client = getInstance({
+            createSubscriptionOptions: mockCreateSubscriptionOptions,
+            replySubscription: 'testSubscription',
+            replyTopic: 'testTopic',
+            checkExistence: true,
+            init: true,
+          });
+          await client.connect();
+        });
+        it('should call "subscription.create" with argument', async () => {
+          // Verify that subscription.create() was called with the correct arguments
+          expect(subscriptionMock.create.calledOnce).to.be.true;
+          expect(
+            subscriptionMock.create.calledWith(mockCreateSubscriptionOptions),
+          ).to.be.true;
+        });
+      });
+
+      describe('when clientIdFilter is turned on', () => {
+        const mockCreateSubscriptionOptions: CreateSubscriptionOptions = {
+          messageRetentionDuration: {
+            seconds: 604800, // 7 days
+          },
+          pushEndpoint: 'https://example.com/push',
+          oidcToken: {
+            serviceAccountEmail: 'example@example.com',
+            audience: 'https://example.com',
+          },
+          topic: 'projects/my-project/topics/my-topic',
+          pushConfig: {
+            pushEndpoint: 'https://example.com/push',
+          },
+          ackDeadlineSeconds: 60,
+          retainAckedMessages: true,
+          labels: {
+            env: 'dev',
+            version: '1.0.0',
+          },
+          enableMessageOrdering: false,
+          expirationPolicy: {
+            ttl: {
+              seconds: 86400, // 1 day
+            },
+          },
+          filter: 'attribute.type = "order"',
+          deadLetterPolicy: {
+            deadLetterTopic: 'projects/my-project/topics/my-dead-letter-topic',
+            maxDeliveryAttempts: 5,
+          },
+          retryPolicy: {
+            minimumBackoff: {
+              seconds: 10,
+            },
+            maximumBackoff: {
+              seconds: 300,
+            },
+          },
+          detached: false,
+          enableExactlyOnceDelivery: true,
+          topicMessageRetentionDuration: {
+            seconds: 2592000, // 30 days
+          },
+          state: 'ACTIVE',
+        };
+
+        beforeEach(async () => {
+          client = getInstance({
+            createSubscriptionOptions: mockCreateSubscriptionOptions,
+            replySubscription: 'testSubscription',
+            replyTopic: 'testTopic',
+            checkExistence: true,
+            init: true,
+            clientIdFilter: true,
+          });
+          await client.connect();
+        });
+        it('should call subscription.create with client id filter', async () => {
+          // Verify that subscription.create() was called with the correct arguments
+          const expectedArgs: CreateSubscriptionOptions = {
+            ...mockCreateSubscriptionOptions,
+            filter: `attributes._clientId = "${client.clientId}" AND (${mockCreateSubscriptionOptions.filter})`,
+          };
+          expect(subscriptionMock.create.calledOnce).to.be.true;
+          expect(subscriptionMock.create.calledWith(expectedArgs)).to.be.true;
+        });
+
+        it('should call subscription.create with client id filter with empty filter', async () => {
+          // Verify that subscription.create() was called with the correct arguments
+          client = getInstance({
+            replySubscription: 'testSubscription',
+            replyTopic: 'testTopic',
+            checkExistence: true,
+            init: true,
+            clientIdFilter: true,
+          });
+          await client.connect();
+          const expectedArgs: CreateSubscriptionOptions = {
+            filter: `attributes._clientId = "${client.clientId}"`,
+          };
+          expect(subscriptionMock.create.calledOnce).to.be.true;
+          expect(subscriptionMock.create.calledWith(expectedArgs)).to.be.true;
+        });
+
+        it('should call not subscription.create with client id when clientIdFilter is off', async () => {
+          // Verify that subscription.create() was called with the correct arguments
+          client = getInstance({
+            replySubscription: 'testSubscription',
+            replyTopic: 'testTopic',
+            checkExistence: true,
+            init: true,
+          });
+          await client.connect();
+          expect(subscriptionMock.create.calledOnce).to.be.true;
+          expect(subscriptionMock.create.calledWith()).to.be.true;
         });
       });
 
@@ -112,7 +282,8 @@ describe('GCPubSubClient', () => {
       beforeEach(async () => {
         client = getInstance({
           replyTopic: 'replyTopic',
-          replySubscription: 'replySubcription',
+          replySubscription: 'replySubscription',
+          appendClientIdToSubscription: true,
         });
 
         try {
@@ -144,72 +315,88 @@ describe('GCPubSubClient', () => {
       it('should not call "subscription.on"', async () => {
         expect(subscriptionMock.on.callCount).to.eq(0);
       });
+      describe('when appendClientIdToSubcription is true', () => {
+        it('should appeand clientId to subscription name', () => {
+          expect(client['replySubscriptionName']).to.equal(
+            `replySubscription-${client.clientId}`,
+          );
+        });
+      });
     });
   });
 
   describe('publish', () => {
-    describe('useAttributes=false', () => {
-      const pattern = 'test';
-      const msg = { pattern, data: 'data' };
-
-      beforeEach(() => {
-        client = getInstance({
-          replyTopic: 'replyTopic',
-          replySubscription: 'replySubcription',
-        });
-
-        (client as any).topic = topicMock;
+    let callback: sinon.SinonSpy;
+    beforeEach(() => {
+      callback = sandbox.spy();
+      client = getInstance({
+        replyTopic: 'replyTopic',
+        replySubscription: 'replySubcription',
+        autoResume: true,
       });
+      (client as any).topic = topicMock;
+      topicMock.publishMessage = sinon.stub().resolves();
+    });
+    const pattern = 'test';
+    const msg = { pattern, data: 'data' };
+    it('should send message to a proper topic', () => {
+      client['publish'](msg, () => {});
+      const message = topicMock.publishMessage.getCall(0).args[0];
+      expect(topicMock.publishMessage.called).to.be.true;
+      expect(message.json).to.be.eql(msg.data);
+    });
 
-      it('should send message to a proper topic', () => {
-        client['publish'](msg, () => {
-          expect(topicMock.publishMessage.called).to.be.true;
-          expect(topicMock.publishMessage.getCall(0).args[0].json).to.be.eql(
-            msg,
-          );
-        });
+    it('should remove listener from routing map on dispose', () => {
+      client['publish'](msg, () => ({}))();
+
+      expect(client['routingMap'].size).to.be.eq(0);
+    });
+
+    it('should call callback on error', () => {
+      const callback = sandbox.spy();
+      sinon.stub(client, 'assignPacketId' as any).callsFake(() => {
+        throw new Error();
       });
+      client['publish'](msg, callback);
+      expect(callback.called).to.be.true;
+      expect(callback.getCall(0).args[0].err).to.be.instanceof(Error);
+    });
 
-      it('should remove listener from routing map on dispose', () => {
-        client['publish'](msg, () => ({}))();
-
-        expect(client['routingMap'].size).to.be.eq(0);
-      });
-
-      it('should call callback on error', () => {
-        const callback = sandbox.spy();
-        sinon.stub(client, 'assignPacketId' as any).callsFake(() => {
-          throw new Error();
-        });
-        client['publish'](msg, callback);
-        expect(callback.called).to.be.true;
-        expect(callback.getCall(0).args[0].err).to.be.instanceof(Error);
+    it('should call resumePublishing on error with ordering key', (done) => {
+      topicMock.publishMessage = sinon.stub().rejects();
+      const message = {
+        data: new GCPubSubMessageBuilder('data').setOrderingKey('asdf').build(),
+        pattern: 'test',
+      };
+      client['publish'](message, () => {
+        expect(topicMock.resumePublishing.called).to.be.true;
+        done();
       });
     });
 
-    describe('useAttributes=true', () => {
-      const pattern = 'test';
-      const msg = { pattern, data: 'data' };
+    it('should send message to a proper topic', () => {
+      client['publish'](msg, () => {});
 
-      beforeEach(() => {
-        client = getInstance({
-          replyTopic: 'replyTopic',
-          replySubscription: 'replySubcription',
-          useAttributes: true,
-        });
+      expect(topicMock.publishMessage.called).to.be.true;
+      const message = topicMock.publishMessage.getCall(0).args[0];
+      expect(message.json).to.be.eql(msg.data);
+      expect(message.attributes._pattern).to.be.eql(JSON.stringify(pattern));
+      expect(message.attributes._id).to.be.not.empty;
+    });
 
-        (client as any).topic = topicMock;
-      });
+    it('should setTimeout to call callback with timeout error when timeout is provided', () => {
+      // TODO: implement test
+      const message = {
+        data: new GCPubSubMessageBuilder('data')
+          .setOrderingKey('asdf')
+          .setTimeout(500)
+          .build(),
+        pattern: 'test',
+      };
 
-      it('should send message to a proper topic', () => {
-        client['publish'](msg, () => {});
-
-        expect(topicMock.publishMessage.called).to.be.true;
-        const message = topicMock.publishMessage.getCall(0).args[0];
-        expect(message.json).to.be.eql(msg.data);
-        expect(message.attributes.pattern).to.be.eql(pattern);
-        expect(message.attributes.id).to.be.not.empty;
-      });
+      client['publish'](message, callback);
+      clock.tick(510);
+      expect(callback.calledOnce).to.be.true;
     });
   });
 
@@ -299,72 +486,74 @@ describe('GCPubSubClient', () => {
     it('should set "replySubscription" to null', () => {
       expect((client as any).replySubscription).to.be.null;
     });
+
+    describe('autoDeleteSubscriptionOnClose is true', () => {
+      beforeEach(async () => {
+        client = getInstance({
+          autoDeleteSubscriptionOnShutdown: true,
+          replyTopic: 'replyTopic',
+          replySubscription: 'replySubcription',
+        });
+        await client.connect();
+        await client.close();
+      });
+      it('should delete subscription on close', () => {
+        expect(subscriptionMock.delete.calledOnce).to.be.true;
+      });
+    });
   });
 
   describe('dispatchEvent', () => {
-    describe('useAttributes=false', () => {
-      const msg = { pattern: 'pattern', data: 'data' };
+    const msg = { pattern: 'pattern', data: 'data' };
 
-      beforeEach(() => {
-        client = getInstance({
-          replyTopic: 'replyTopic',
-          replySubscription: 'replySubcription',
-        });
-        (client as any).topic = topicMock;
+    beforeEach(() => {
+      client = getInstance({
+        replyTopic: 'replyTopic',
+        replySubscription: 'replySubcription',
       });
-
-      it('should publish packet', async () => {
-        await client['dispatchEvent'](msg);
-        expect(topicMock.publishMessage.called).to.be.true;
-      });
-
-      it('should publish packet with proper data', async () => {
-        await client['dispatchEvent'](msg);
-        expect(topicMock.publishMessage.getCall(0).args[0].json).to.be.eql(msg);
-      });
-
-      it('should throw error', async () => {
-        topicMock.publishMessage.callsFake((a: any, b: any, c: any, d: any) =>
-          d(new Error()),
-        );
-        client['dispatchEvent'](msg).catch((err) =>
-          expect(err).to.be.instanceOf(Error),
-        );
-      });
+      (client as any).topic = topicMock;
     });
 
-    describe('useAttributes=true', () => {
-      const msg = { pattern: 'pattern', data: 'data' };
+    it('should publish packet', async () => {
+      await client['dispatchEvent'](msg);
+      expect(topicMock.publishMessage.called).to.be.true;
+    });
 
-      beforeEach(() => {
-        client = getInstance({
-          replyTopic: 'replyTopic',
-          replySubscription: 'replySubcription',
-          useAttributes: true,
-        });
-        (client as any).topic = topicMock;
-      });
+    it('should publish packet with proper data', async () => {
+      await client['dispatchEvent'](msg);
+      expect(topicMock.publishMessage.getCall(0).args[0].json).to.be.eql(
+        msg.data,
+      );
+    });
 
-      it('should publish packet', async () => {
-        await client['dispatchEvent'](msg);
-        expect(topicMock.publishMessage.called).to.be.true;
-      });
+    it('should throw error', async () => {
+      topicMock.publishMessage.callsFake((a: any, b: any, c: any, d: any) =>
+        d(new Error()),
+      );
+      client['dispatchEvent'](msg).catch((err) =>
+        expect(err).to.be.instanceOf(Error),
+      );
+    });
 
-      it('should publish packet with proper data', async () => {
-        await client['dispatchEvent'](msg);
-        const message = topicMock.publishMessage.getCall(0).args[0];
-        expect(message.json).to.be.eql(msg.data);
-        expect(message.attributes.pattern).to.be.eql(msg.pattern);
-      });
+    it('should publish packet', async () => {
+      await client['dispatchEvent'](msg);
+      expect(topicMock.publishMessage.called).to.be.true;
+    });
 
-      it('should throw error', async () => {
-        topicMock.publishMessage.callsFake((a: any, b: any, c: any, d: any) =>
-          d(new Error()),
-        );
-        client['dispatchEvent'](msg).catch((err) =>
-          expect(err).to.be.instanceOf(Error),
-        );
-      });
+    it('should publish packet with proper data', async () => {
+      await client['dispatchEvent'](msg);
+      const message = topicMock.publishMessage.getCall(0).args[0];
+      expect(message.json).to.be.eql(msg.data);
+      expect(message.attributes._pattern).to.be.eql(msg.pattern);
+    });
+
+    it('should throw error', async () => {
+      topicMock.publishMessage.callsFake((a: any, b: any, c: any, d: any) =>
+        d(new Error()),
+      );
+      client['dispatchEvent'](msg).catch((err) =>
+        expect(err).to.be.instanceOf(Error),
+      );
     });
   });
 
@@ -389,11 +578,15 @@ describe('GCPubSubClient', () => {
   function getInstance(options: GCPubSubOptions): GCPubSubClient {
     const client = new GCPubSubClient(options);
 
+    // Override client ID for testing purpose
+    // Object.assign(client, { clientId: '123' });
+
     subscriptionMock = {
       create: sandbox.stub().resolves(),
       close: sandbox.stub().callsFake((callback) => callback()),
       on: sandbox.stub().returnsThis(),
       exists: sandbox.stub().resolves([true]),
+      delete: sandbox.stub().resolves(),
     };
 
     topicMock = {
@@ -402,6 +595,7 @@ describe('GCPubSubClient', () => {
       publishMessage: sandbox.stub().resolves(),
       exists: sandbox.stub().resolves([true]),
       subscription: sandbox.stub().returns(subscriptionMock),
+      resumePublishing: sinon.stub().resolves(),
     };
 
     pubsub = {
@@ -410,7 +604,6 @@ describe('GCPubSubClient', () => {
     };
 
     createClient = sandbox.stub(client, 'createClient').callsFake(() => pubsub);
-
     return client;
   }
 });

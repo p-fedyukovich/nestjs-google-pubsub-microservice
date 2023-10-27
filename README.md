@@ -4,6 +4,8 @@
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo_text.svg" width="320" alt="Nest Logo" /></a>
 </p>
 
+This repository is a fork of [p-fedyukovich/nestjs-google-pubsub-microservice](https://github.com/p-fedyukovich/nestjs-google-pubsub-microservice)
+
 ### Google Cloud Pub/Sub
 
 [Pub/Sub](https://cloud.google.com/pubsub) is an asynchronous messaging service that decouples services that produce events from services that process events.
@@ -44,7 +46,7 @@ The `options` property is specific to the chosen transporter. The <strong>GCloud
   <tr>
     <td><code>topic</code></td>
     <td>Topic name which your server subscription will belong to</td>
-  </tr>  
+  </tr>
   <tr>
     <td><code>subscription</code></td>
     <td>Subscription name which your server will listen to</td>
@@ -128,7 +130,7 @@ export class AppModule {}
 
 The client can then be injected with `@InjectGCPubSubClient` decorator
 
-```typescript  
+```typescript
 @Injectable()
 export class AppService {
   constructor(
@@ -150,7 +152,7 @@ To fully utilize the features provided by Google PubSub, the message needs to be
 
 ```typescript
 this.client.send(
-    'pattern', 
+    'pattern',
     new GCPubSubMessageBuilder(data)
       .setAttributes(attrs)
       .setOrderingKey('orderingKey')

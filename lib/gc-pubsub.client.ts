@@ -65,9 +65,13 @@ export class GCPubSubClient extends ClientProxy {
     this.publisherConfig =
       this.options.publisher || GC_PUBSUB_DEFAULT_PUBLISHER_CONFIG;
 
-    this.replyTopicName = `${this.scopedEnvKey}${this.options.replyTopic}`;
+    this.replyTopicName = this.options.replyTopic
+      ? `${this.scopedEnvKey}${this.options.replyTopic}`
+      : undefined;
 
-    this.replySubscriptionName = `${this.scopedEnvKey}${this.options.replySubscription}`;
+    this.replySubscriptionName = this.options.replySubscription
+      ? `${this.scopedEnvKey}${this.options.replySubscription}`
+      : undefined;
 
     this.noAck = this.options.noAck ?? GC_PUBSUB_DEFAULT_NO_ACK;
     this.init = this.options.init ?? GC_PUBSUB_DEFAULT_INIT;

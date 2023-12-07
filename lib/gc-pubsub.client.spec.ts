@@ -39,6 +39,21 @@ describe('GCPubSubClient', () => {
         );
       });
     });
+
+    describe('when the replyTopic and the replySubscription are not defined', () => {
+      beforeEach(() => {
+        client = getInstance({
+          topic: 'topic',
+          scopedEnvKey: 'my-key',
+        });
+      });
+
+      it('should set the scopedEnvKey on topics and subscriptions', () => {
+        expect(client['topicName']).to.be.eq('my-keytopic');
+        expect(client['replyTopicName']).to.be.eq(undefined);
+        expect(client['replySubscriptionName']).to.be.eq(undefined);
+      });
+    });
   });
 
   describe('connect', () => {

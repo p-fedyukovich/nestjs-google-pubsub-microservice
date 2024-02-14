@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { ALREADY_EXISTS } from './gc-pubsub.constants';
 import { GCPubSubClient } from './gc-pubsub.client';
-import { GCPubSubOptions } from './gc-pubsub.interface';
+import { GCPubSubClientOptions } from './gc-pubsub.interface';
 import { GCPubSubMessageBuilder } from './gc-message.builder';
 import { CreateSubscriptionOptions } from '@google-cloud/pubsub';
 
@@ -340,6 +340,7 @@ describe('GCPubSubClient', () => {
     const pattern = 'test';
     const msg = { pattern, data: 'data' };
     it('should send message to a proper topic', () => {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
       client['publish'](msg, () => {});
       const message = topicMock.publishMessage.getCall(0).args[0];
       expect(topicMock.publishMessage.called).to.be.true;
@@ -375,7 +376,8 @@ describe('GCPubSubClient', () => {
     });
 
     it('should send message to a proper topic', () => {
-      client['publish'](msg, () => {});
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      client['publish'](msg, (): any => {});
 
       expect(topicMock.publishMessage.called).to.be.true;
       const message = topicMock.publishMessage.getCall(0).args[0];
@@ -575,7 +577,7 @@ describe('GCPubSubClient', () => {
     });
   });
 
-  function getInstance(options: GCPubSubOptions): GCPubSubClient {
+  function getInstance(options: GCPubSubClientOptions): GCPubSubClient {
     const client = new GCPubSubClient(options);
 
     // Override client ID for testing purpose

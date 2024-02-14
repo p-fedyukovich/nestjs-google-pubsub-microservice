@@ -23,7 +23,7 @@ import {
 } from '@nestjs/microservices/constants';
 import { isString, isUndefined } from '@nestjs/common/utils/shared.utils';
 
-import { GCPubSubOptions } from './gc-pubsub.interface';
+import { GCPubSubServerOptions } from './gc-pubsub.interface';
 import {
   ALREADY_EXISTS,
   GC_PUBSUB_DEFAULT_CLIENT_CONFIG,
@@ -52,13 +52,12 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   protected readonly init: boolean;
   protected readonly checkExistence: boolean;
   protected readonly createSubscriptionOptions: CreateSubscriptionOptions;
-  protected readonly autoDeleteSubscriptionOnShutdown: boolean;
   protected readonly ackAfterResponse: boolean;
 
   public client: PubSub | null = null;
   public subscription: Subscription | null = null;
 
-  constructor(protected readonly options: GCPubSubOptions) {
+  constructor(protected readonly options: GCPubSubServerOptions) {
     super();
 
     this.clientConfig = this.options.client || GC_PUBSUB_DEFAULT_CLIENT_CONFIG;

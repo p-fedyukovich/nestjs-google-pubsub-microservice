@@ -7,20 +7,22 @@ import {
   Provider,
 } from '@nestjs/common';
 import { TimeoutInterceptor } from './gc-pubsub.timeout.decorator';
-import { GCPubSubOptions } from './gc-pubsub.interface';
+import { GCPubSubClientOptions } from './gc-pubsub.interface';
 import { ClientProxy, Closeable } from '@nestjs/microservices';
 import { GCPubSubClient } from './gc-pubsub.client';
 import { getGCPubSubClientToken } from './gc-client.inject.decorator';
 
 export interface GCPubSubRegisterClientOptions {
   name: string;
-  config: GCPubSubOptions;
+  config: GCPubSubClientOptions;
 }
 
 export interface GCPubSubRegisterClientAsyncOption
   extends Pick<ModuleMetadata, 'imports'> {
   name: string;
-  useFactory?: (...args: any[]) => Promise<GCPubSubOptions> | GCPubSubOptions;
+  useFactory?: (
+    ...args: any[]
+  ) => Promise<GCPubSubClientOptions> | GCPubSubClientOptions;
   inject?: any[];
   extraProviders?: Provider[];
 }

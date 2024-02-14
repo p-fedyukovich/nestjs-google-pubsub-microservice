@@ -32,7 +32,7 @@ import {
   GC_PUBSUB_DEFAULT_CLIENT_ID_FILTER,
   GC_AUTO_DELETE_SUBCRIPTION_ON_SHUTDOWN,
 } from './gc-pubsub.constants';
-import { GCPubSubOptions } from './gc-pubsub.interface';
+import { GCPubSubClientOptions } from './gc-pubsub.interface';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
 import { UUID, randomUUID } from 'crypto';
 import { GCPubSubMessageSerializer } from './gc-message.serializer';
@@ -61,7 +61,7 @@ export class GCPubSubClient extends ClientProxy {
   protected init: boolean;
   protected readonly checkExistence: boolean;
 
-  constructor(protected readonly options: GCPubSubOptions) {
+  constructor(protected readonly options: GCPubSubClientOptions) {
     super();
     this.clientId = randomUUID();
 
@@ -275,7 +275,7 @@ export class GCPubSubClient extends ClientProxy {
     }
   }
 
-  protected initializeSerializer(options: GCPubSubOptions): void {
+  protected initializeSerializer(options: GCPubSubClientOptions): void {
     this.serializer = options?.serializer ?? new GCPubSubMessageSerializer();
   }
 

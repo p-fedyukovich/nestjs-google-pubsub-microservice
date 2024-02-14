@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { GCPubSubServer } from './gc-pubsub.server';
 import { NO_MESSAGE_HANDLER } from '@nestjs/microservices/constants';
 import { BaseRpcContext } from '@nestjs/microservices/ctx-host/base-rpc.context';
 import { ALREADY_EXISTS } from './gc-pubsub.constants';
-import { GCPubSubOptions } from './gc-pubsub.interface';
+import { GCPubSubServerOptions } from './gc-pubsub.interface';
 import { CreateSubscriptionOptions, Message } from '@google-cloud/pubsub';
 import Sinon = require('sinon');
 
@@ -176,6 +177,7 @@ describe('GCPubSubServer', () => {
 
     const messageOptions: Message = {
       ackId: 'id',
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       publishTime: new Date(),
       attributes: {
@@ -221,6 +223,7 @@ describe('GCPubSubServer', () => {
       await server.listen(() => {});
       const timeoutMessageOptions: Message = {
         ackId: 'id',
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         publishTime: new Date(Date.now() - 5000),
         attributes: {
@@ -343,7 +346,7 @@ describe('GCPubSubServer', () => {
     });
   });
 
-  function getInstance(options: GCPubSubOptions): GCPubSubServer {
+  function getInstance(options: GCPubSubServerOptions): GCPubSubServer {
     const server = new GCPubSubServer(options);
 
     sandbox = sinon.createSandbox();

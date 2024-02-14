@@ -327,6 +327,7 @@ describe('GCPubSubClient', () => {
 
   describe('publish', () => {
     let callback: sinon.SinonSpy;
+
     beforeEach(() => {
       callback = sandbox.spy();
       client = getInstance({
@@ -336,7 +337,10 @@ describe('GCPubSubClient', () => {
       });
       (client as any).topic = topicMock;
       topicMock.publishMessage = sinon.stub().resolves();
+
+      sinon.spy(client['serializer'], 'serialize');
     });
+
     const pattern = 'test';
     const msg = { pattern, data: 'data' };
     it('should send message to a proper topic', () => {
@@ -344,7 +348,10 @@ describe('GCPubSubClient', () => {
       client['publish'](msg, () => {});
       const message = topicMock.publishMessage.getCall(0).args[0];
       expect(topicMock.publishMessage.called).to.be.true;
-      expect(message.json).to.be.eql(msg.data);
+      expect(message.data).to.be.eql(
+        (client['serializer'].serialize as sinon.SinonSpy).getCall(0)
+          .returnValue.data,
+      );
     });
 
     it('should remove listener from routing map on dispose', () => {
@@ -381,7 +388,7 @@ describe('GCPubSubClient', () => {
 
       expect(topicMock.publishMessage.called).to.be.true;
       const message = topicMock.publishMessage.getCall(0).args[0];
-      expect(message.json).to.be.eql(msg.data);
+      expect(message.data).to.be.eql(msg.data);
       expect(message.attributes._pattern).to.be.eql(JSON.stringify(pattern));
       expect(message.attributes._id).to.be.not.empty;
     });
@@ -523,7 +530,7 @@ describe('GCPubSubClient', () => {
 
     it('should publish packet with proper data', async () => {
       await client['dispatchEvent'](msg);
-      expect(topicMock.publishMessage.getCall(0).args[0].json).to.be.eql(
+      expect(topicMock.publishMessage.getCall(0).args[0].data).to.be.eql(
         msg.data,
       );
     });
@@ -545,7 +552,7 @@ describe('GCPubSubClient', () => {
     it('should publish packet with proper data', async () => {
       await client['dispatchEvent'](msg);
       const message = topicMock.publishMessage.getCall(0).args[0];
-      expect(message.json).to.be.eql(msg.data);
+      expect(message.data).to.be.eql(msg.data);
       expect(message.attributes._pattern).to.be.eql(msg.pattern);
     });
 

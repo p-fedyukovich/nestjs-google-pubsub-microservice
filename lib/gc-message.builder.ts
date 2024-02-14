@@ -1,6 +1,6 @@
 export class GCPubSubMessage<TData = any, TAttrs = any> {
   constructor(
-    public readonly json: TData,
+    public readonly data: TData,
     public readonly attributes: TAttrs,
     public readonly orderingKey: string | undefined,
   ) {}

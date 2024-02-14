@@ -14,7 +14,6 @@ export class GCPubSubBroadcastController implements OnApplicationShutdown {
       topic: 'broadcast',
       replyTopic: 'test_reply',
       replySubscription: 'test_reply-sub',
-      subscription: 'test-sub',
       client: {
         apiEndpoint: 'localhost:8085',
         projectId: 'test-project-id',

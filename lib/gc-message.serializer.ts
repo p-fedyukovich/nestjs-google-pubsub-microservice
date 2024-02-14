@@ -4,8 +4,6 @@ import { GCPubSubMessage, GCPubSubMessageBuilder } from './gc-message.builder';
 export class GCPubSubMessageSerializer
   implements Serializer<ReadPacket, GCPubSubMessage>
 {
-  constructor() {}
-
   serialize(packet: ReadPacket<any> | any): GCPubSubMessage<any, any> {
     let message: GCPubSubMessage;
 
@@ -15,6 +13,9 @@ export class GCPubSubMessageSerializer
       message = new GCPubSubMessageBuilder(packet.data).build();
     }
 
-    return message;
+    return {
+      ...message,
+      data: Buffer.from(JSON.stringify(message.data)),
+    };
   }
 }

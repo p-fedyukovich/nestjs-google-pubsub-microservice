@@ -6,8 +6,8 @@ import { SinonSandbox, SinonStub } from 'sinon';
 import sinon = require('sinon');
 
 describe('GCPubSubMessageSerializer', () => {
-  let serializer: GCPubSubMessageSerializer = new GCPubSubMessageSerializer();
-  let sandbox: SinonSandbox = sinon.createSandbox();
+  const serializer: GCPubSubMessageSerializer = new GCPubSubMessageSerializer();
+  const sandbox: SinonSandbox = sinon.createSandbox();
   let buildStub: SinonStub;
 
   beforeEach(() => {
@@ -33,7 +33,11 @@ describe('GCPubSubMessageSerializer', () => {
 
     const result = serializer.serialize(packet);
 
-    expect(result).to.deep.equal(message);
+    expect(result).to.deep.equal({
+      data: Buffer.from(JSON.stringify(message.data)),
+      attributes: message.attributes,
+      orderingKey: message.orderingKey,
+    });
   });
 
   it('should create a new GCPubSubMessage using GCPubSubMessageBuilder if packet data is not a GCPubSubMessage', () => {
@@ -41,9 +45,8 @@ describe('GCPubSubMessageSerializer', () => {
     buildStub.returns(new GCPubSubMessage(data, undefined, undefined));
     const packet = { data: data, pattern: 'test' };
 
-    const result = serializer.serialize(packet);
+    serializer.serialize(packet);
 
-    expect(result).to.be.an.instanceOf(GCPubSubMessage);
     expect(buildStub.calledOnce).to.be.true;
   });
 });

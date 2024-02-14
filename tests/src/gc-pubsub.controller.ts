@@ -24,7 +24,6 @@ export class GCPubSubController implements OnApplicationShutdown {
   constructor() {
     this.client = new GCPubSubClient({
       topic: 'broadcast',
-      subscription: 'test-sub',
       replyTopic: 'test_reply',
       replySubscription: 'test_reply-sub',
       client: {

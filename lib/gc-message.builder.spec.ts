@@ -35,7 +35,7 @@ describe('GCPubSubMessageBuilder', () => {
       const tempData = { id: 2, name: 'Paul' };
       const result = builder.setData(tempData).build();
 
-      expect(result.json).to.equal(tempData);
+      expect(result.data).to.equal(tempData);
     });
   });
 
@@ -84,7 +84,7 @@ describe('GCPubSubMessageBuilder', () => {
 
     const message = builder.build();
 
-    expect(message.json).to.deep.equal(data);
+    expect(message.data).to.deep.equal(data);
     expect(message.attributes).to.deep.equal(
       Object.assign(attributes, { timeout: 500 }),
     );
@@ -96,7 +96,7 @@ describe('GCPubSubMessageBuilder', () => {
     it('should build with valid data only', () => {
       const message = new GCPubSubMessageBuilder('data').build();
       expect(message).to.be.instanceOf(GCPubSubMessage);
-      expect(message.json).to.equal('data');
+      expect(message.data).to.equal('data');
       expect(message.attributes).to.be.an('object').and.is.empty;
       expect(message.orderingKey).to.be.undefined;
     });
@@ -113,7 +113,7 @@ describe('GCPubSubMessageBuilder', () => {
 
       const message = builder.build();
 
-      expect(message.json).to.deep.equal(data);
+      expect(message.data).to.deep.equal(data);
       expect(message.attributes).to.deep.equal(attributes);
       expect(message.orderingKey).to.equal(orderingKey);
     });
@@ -126,7 +126,7 @@ describe('GCPubSubMessageBuilder', () => {
 
       const message = builder.build();
 
-      expect(message.json).to.deep.equal(data);
+      expect(message.data).to.deep.equal(data);
       expect(message.attributes).to.deep.equal(
         Object.assign(attributes, { timeout: 500 }),
       );

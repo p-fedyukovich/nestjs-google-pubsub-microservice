@@ -85,7 +85,6 @@ describe('GCPubSub with Message Builder', () => {
               name: 'client3',
               config: {
                 topic: 'broadcast3',
-                subscription: 'test-sub-1',
                 replyTopic: 'test_reply',
                 replySubscription: 'test_reply-sub',
                 client: {
@@ -104,14 +103,11 @@ describe('GCPubSub with Message Builder', () => {
         strategy: new GCPubSubServer({
           topic: 'broadcast3',
           subscription: 'test-sub-4',
-          replyTopic: 'test_reply',
-          replySubscription: 'test_reply-sub',
           client: {
             apiEndpoint: 'localhost:8085',
             projectId: 'test-project-id',
           },
           init: true,
-          autoDeleteSubscriptionOnShutdown: true,
         }),
       });
       await deleteSubscriptionApp.startAllMicroservices();
@@ -126,7 +122,6 @@ describe('GCPubSub with Message Builder', () => {
               name: 'client3',
               config: {
                 topic: 'broadcast3',
-                subscription: 'test-sub',
                 replyTopic: 'test_reply',
                 replySubscription: 'test_reply-sub',
                 client: {

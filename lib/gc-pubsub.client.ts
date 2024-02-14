@@ -218,12 +218,12 @@ export class GCPubSubClient extends ClientProxy {
     const attributes = {
       _replyTo: this.replyTopicName,
       _pattern: this.getRequestPattern(packet.pattern),
-      ...(serializedPacket.json?.attributes &&
-        serializedPacket.json?.attributes),
+      ...(serializedPacket.data?.attributes &&
+        serializedPacket.data?.attributes),
     };
 
     await this.topic.publishMessage({
-      json: serializedPacket.json,
+      data: serializedPacket.data,
       orderingKey: serializedPacket.orderingKey,
       attributes: attributes,
     });
@@ -249,7 +249,7 @@ export class GCPubSubClient extends ClientProxy {
       if (this.topic) {
         this.topic
           .publishMessage({
-            json: serializedPacket.json,
+            data: serializedPacket.data,
             orderingKey: serializedPacket.orderingKey,
             attributes: attributes,
           })

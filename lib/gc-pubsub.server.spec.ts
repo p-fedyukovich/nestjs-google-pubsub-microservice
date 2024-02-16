@@ -8,7 +8,6 @@ import { ALREADY_EXISTS } from './gc-pubsub.constants';
 import { GCPubSubServerOptions } from './gc-pubsub.interface';
 import { CreateSubscriptionOptions, Message } from '@google-cloud/pubsub';
 import Sinon = require('sinon');
-import { GCPubSubParser } from './gc-pubsub.parser';
 
 describe('GCPubSubServer', () => {
   let server: GCPubSubServer;
@@ -348,8 +347,10 @@ describe('GCPubSubServer', () => {
     });
   });
 
-  function getInstance(options: GCPubSubServerOptions): GCPubSubServer {
-    const server = new GCPubSubServer(options);
+  function getInstance(
+    options: Partial<GCPubSubServerOptions>,
+  ): GCPubSubServer {
+    const server = new GCPubSubServer(options as GCPubSubServerOptions);
 
     sandbox = sinon.createSandbox();
 

@@ -5,7 +5,6 @@ import { GCPubSubClient } from './gc-pubsub.client';
 import { GCPubSubClientOptions } from './gc-pubsub.interface';
 import { GCPubSubMessageBuilder } from './gc-message.builder';
 import { CreateSubscriptionOptions } from '@google-cloud/pubsub';
-import { GCPubSubParser } from './gc-pubsub.parser';
 
 describe('GCPubSubClient', () => {
   let client: GCPubSubClient;
@@ -14,7 +13,6 @@ describe('GCPubSubClient', () => {
   let subscriptionMock: any;
   let createClient: sinon.SinonStub;
   let sandbox: sinon.SinonSandbox;
-  let parser: GCPubSubParser;
 
   let clock: sinon.SinonFakeTimers;
 
@@ -595,8 +593,10 @@ describe('GCPubSubClient', () => {
     });
   });
 
-  function getInstance(options: GCPubSubClientOptions): GCPubSubClient {
-    const client = new GCPubSubClient(options);
+  function getInstance(
+    options: Partial<GCPubSubClientOptions>,
+  ): GCPubSubClient {
+    const client = new GCPubSubClient(options as GCPubSubClientOptions);
 
     // Override client ID for testing purpose
     // Object.assign(client, { clientId: '123' });

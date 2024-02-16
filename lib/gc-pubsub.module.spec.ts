@@ -23,7 +23,7 @@ describe('GCPubSubModule', () => {
       },
     ];
     beforeEach(() => {
-      dynamicModule = GCPubSubClientModule.register(moduleConfigs);
+      dynamicModule = GCPubSubClientModule.register(moduleConfigs as any);
     });
 
     it('should return an expected module ref', () => {
@@ -41,7 +41,7 @@ describe('GCPubSubModule', () => {
           removeClientId((provider as ValueProvider).useValue),
         ).to.deep.equal(
           GCPubSubClientModule['assignOnAppShutdownHook'](
-            removeClientId(new GCPubSubClient({})),
+            removeClientId(new GCPubSubClient({} as any)),
           ),
         );
       }));
@@ -56,13 +56,17 @@ describe('GCPubSubModule', () => {
       useFactory,
     };
     it('should return an expected module ref', () => {
-      dynamicModule = GCPubSubClientModule.registerAsync([registerOption]);
+      dynamicModule = GCPubSubClientModule.registerAsync([
+        registerOption as any,
+      ]);
       expect(dynamicModule.module).to.be.eql(GCPubSubClientModule);
     });
 
     describe('when useFactory', () => {
       it('should return an expected providers array with useFactory', () => {
-        dynamicModule = GCPubSubClientModule.registerAsync([registerOption]);
+        dynamicModule = GCPubSubClientModule.registerAsync([
+          registerOption as any,
+        ]);
         expect(dynamicModule.imports).to.be.deep.eq([]);
         expect(dynamicModule.exports).to.be.eq(dynamicModule.providers);
         expect(dynamicModule.providers).to.be.have.length(1);

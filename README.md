@@ -27,15 +27,18 @@ $ npm i --save @google-cloud/pubsub nestjs-google-pubsub-microservice
 To use the Pub/Sub transporter, pass the following options object to the `createMicroservice()` method:
 
 ```typescript
-const app = await NestFactory.createMicroservice<MicroserviceOptions>(ApplicationModule, {
-  strategy: new GCPubSubServer({
-    topic: 'cats_topic',
-    subscription: 'cats_subscription',
-    client: {
-      projectId: 'microservice',
-    },
-  }),
-});
+const app = await NestFactory.createMicroservice<MicroserviceOptions>(
+  ApplicationModule,
+  {
+    strategy: new GCPubSubServer({
+      topic: 'cats_topic',
+      subscription: 'cats_subscription',
+      client: {
+        projectId: 'microservice',
+      },
+    }),
+  },
+);
 ```
 
 #### Options
@@ -108,6 +111,7 @@ The `options` property is specific to the chosen transporter. The <strong>GCloud
 #### Client
 
 Client can be instantiated by importing `GCPubSubClientModule` to the root module. The clients can be registered with both the `register` method or the `registerAsync` method via `useFactory`.
+
 ```typescript
 @Module({
   imports: [
@@ -134,31 +138,34 @@ The client can then be injected with `@InjectGCPubSubClient` decorator
 @Injectable()
 export class AppService {
   constructor(
-    @InjectGCPubSubClient('client-1') private readonly client: GCPubSUbCLient
+    @InjectGCPubSubClient('client-1') private readonly client: GCPubSUbCLient,
   ) {}
 }
 ```
 
 If the token for the client is needed for tests, the package provides a utility function `getGCPubSubClientToken` to retrive the provider token of the client.
+
 ```typescript
-const token = getGCPubSubClientToken('client-1')
+const token = getGCPubSubClientToken('client-1');
 ```
 
 #### Message
+
 To fully utilize the features provided by Google PubSub, the message needs to be serialized and deserialized in a certain way to ensure the integrity of the data. Therefore, a helper class, `GCPubSubMessageBuilder` is available to build messages with features such as attributes, ordering key and timeouts.
 
 ##### GCPubSubMessageBuilder
+
 <strong>Usage</strong>
 
 ```typescript
 this.client.send(
-    'pattern',
-    new GCPubSubMessageBuilder(data)
-      .setAttributes(attrs)
-      .setOrderingKey('orderingKey')
-      .setTimeout(12000)
-      .build()
-  )
+  'pattern',
+  new GCPubSubMessageBuilder(data)
+    .setAttributes(attrs)
+    .setOrderingKey('orderingKey')
+    .setTimeout(12000)
+    .build(),
+);
 ```
 
 <table>
@@ -195,7 +202,6 @@ this.client.send(
     <td><code>build</code></td><td><code>() => GCPubSubMessage</code></td><td>Build the message, throws error if data is empty</td>
   </tr>
 </table>
-
 
 #### Context
 

@@ -8,6 +8,7 @@ import { ALREADY_EXISTS } from './gc-pubsub.constants';
 import { GCPubSubServerOptions } from './gc-pubsub.interface';
 import { CreateSubscriptionOptions, Message } from '@google-cloud/pubsub';
 import Sinon = require('sinon');
+import { GCPubSubParser } from './gc-pubsub.parser';
 
 describe('GCPubSubServer', () => {
   let server: GCPubSubServer;
@@ -16,6 +17,7 @@ describe('GCPubSubServer', () => {
   let subscriptionMock: any;
   let createClient: sinon.SinonStub;
   let sandbox: sinon.SinonSandbox;
+
   const objectToMap = (obj: any) =>
     new Map(Object.keys(obj).map((key) => [key, obj[key]]) as any);
 

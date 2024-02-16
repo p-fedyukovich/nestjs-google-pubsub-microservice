@@ -37,6 +37,7 @@ import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
 import { UUID, randomUUID } from 'crypto';
 import { GCPubSubMessageSerializer } from './gc-message.serializer';
 import { GCPubSubMessage } from './gc-message.builder';
+import { GCPubSubParser, IGCPubSubParser } from './gc-pubsub.parser';
 
 export class GCPubSubClient extends ClientProxy {
   public readonly clientId: UUID;
@@ -54,6 +55,7 @@ export class GCPubSubClient extends ClientProxy {
   protected readonly createSubscriptionOptions: CreateSubscriptionOptions;
   protected readonly autoDeleteSubscriptionOnShutdown: boolean;
   protected readonly clientIdFilter: boolean;
+  protected readonly parser: IGCPubSubParser;
 
   public client: PubSub | null = null;
   public replySubscription: Subscription | null = null;
@@ -100,6 +102,8 @@ export class GCPubSubClient extends ClientProxy {
 
     this.initializeSerializer(options);
     this.initializeDeserializer(options);
+
+    this.parser = options.parser ?? new GCPubSubParser();
   }
 
   public getRequestPattern(pattern: string): string {
@@ -283,7 +287,7 @@ export class GCPubSubClient extends ClientProxy {
     data: Buffer;
     attributes: Record<string, string>;
   }): Promise<boolean> {
-    const rawMessage = JSON.parse(message.data.toString());
+    const rawMessage = await this.parser.parse(message);
 
     const { err, response, isDisposed, id } = this.deserializer.deserialize(
       rawMessage,

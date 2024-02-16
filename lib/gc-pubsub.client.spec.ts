@@ -5,6 +5,7 @@ import { GCPubSubClient } from './gc-pubsub.client';
 import { GCPubSubClientOptions } from './gc-pubsub.interface';
 import { GCPubSubMessageBuilder } from './gc-message.builder';
 import { CreateSubscriptionOptions } from '@google-cloud/pubsub';
+import { GCPubSubParser } from './gc-pubsub.parser';
 
 describe('GCPubSubClient', () => {
   let client: GCPubSubClient;
@@ -13,6 +14,7 @@ describe('GCPubSubClient', () => {
   let subscriptionMock: any;
   let createClient: sinon.SinonStub;
   let sandbox: sinon.SinonSandbox;
+  let parser: GCPubSubParser;
 
   let clock: sinon.SinonFakeTimers;
 
@@ -315,8 +317,8 @@ describe('GCPubSubClient', () => {
       it('should not call "subscription.on"', async () => {
         expect(subscriptionMock.on.callCount).to.eq(0);
       });
-      describe('when appendClientIdToSubcription is true', () => {
-        it('should appeand clientId to subscription name', () => {
+      describe('when appendClientIdToSubscription is true', () => {
+        it('should append clientId to subscription name', () => {
           expect(client['replySubscriptionName']).to.equal(
             `replySubscription-${client.clientId}`,
           );
@@ -388,7 +390,10 @@ describe('GCPubSubClient', () => {
 
       expect(topicMock.publishMessage.called).to.be.true;
       const message = topicMock.publishMessage.getCall(0).args[0];
-      expect(message.data).to.be.eql(msg.data);
+      expect(message.data).to.be.eql(
+        (client['serializer'].serialize as sinon.SinonSpy).getCall(0)
+          .returnValue.data,
+      );
       expect(message.attributes._pattern).to.be.eql(JSON.stringify(pattern));
       expect(message.attributes._id).to.be.not.empty;
     });
@@ -521,6 +526,8 @@ describe('GCPubSubClient', () => {
         replySubscription: 'replySubcription',
       });
       (client as any).topic = topicMock;
+
+      sinon.spy(client['serializer'], 'serialize');
     });
 
     it('should publish packet', async () => {
@@ -531,7 +538,8 @@ describe('GCPubSubClient', () => {
     it('should publish packet with proper data', async () => {
       await client['dispatchEvent'](msg);
       expect(topicMock.publishMessage.getCall(0).args[0].data).to.be.eql(
-        msg.data,
+        (client['serializer'].serialize as sinon.SinonSpy).getCall(0)
+          .returnValue.data,
       );
     });
 
@@ -552,7 +560,10 @@ describe('GCPubSubClient', () => {
     it('should publish packet with proper data', async () => {
       await client['dispatchEvent'](msg);
       const message = topicMock.publishMessage.getCall(0).args[0];
-      expect(message.data).to.be.eql(msg.data);
+      expect(message.data).to.be.eql(
+        (client['serializer'].serialize as sinon.SinonSpy).getCall(0)
+          .returnValue.data,
+      );
       expect(message.attributes._pattern).to.be.eql(msg.pattern);
     });
 

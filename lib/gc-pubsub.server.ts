@@ -38,6 +38,7 @@ import {
 } from './gc-pubsub.constants';
 import { GCPubSubContext } from './gc-pubsub.context';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
+import { GCPubSubParser, IGCPubSubParser } from './gc-pubsub.parser';
 
 export class GCPubSubServer extends Server implements CustomTransportStrategy {
   protected logger = new Logger(GCPubSubServer.name);
@@ -53,6 +54,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   protected readonly checkExistence: boolean;
   protected readonly createSubscriptionOptions: CreateSubscriptionOptions;
   protected readonly ackAfterResponse: boolean;
+  protected readonly parser: IGCPubSubParser;
 
   public client: PubSub | null = null;
   public subscription: Subscription | null = null;
@@ -87,6 +89,8 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
     this.initializeSerializer(options);
     this.initializeDeserializer(options);
+
+    this.parser = options.parser ?? new GCPubSubParser();
   }
 
   public async listen(callback: () => void) {
@@ -154,8 +158,8 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   }
 
   public async handleMessage(message: Message) {
-    const { data, attributes, publishTime } = message;
-    const rawMessage = JSON.parse(data.toString());
+    const { attributes, publishTime } = message;
+    const rawMessage = await this.parser.parse(message);
     const now = new Date();
 
     const packet = this.deserializer.deserialize({

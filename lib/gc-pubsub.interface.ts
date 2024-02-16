@@ -2,6 +2,7 @@ import { ClientConfig, CreateSubscriptionOptions } from '@google-cloud/pubsub';
 import { Deserializer, Serializer } from '@nestjs/microservices';
 import { PublishOptions } from '@google-cloud/pubsub/build/src/publisher';
 import { SubscriberOptions } from '@google-cloud/pubsub/build/src/subscriber';
+import { IGCPubSubParser } from './gc-pubsub.parser';
 
 export interface GCPubSubClientOptions {
   client?: ClientConfig;
@@ -20,6 +21,7 @@ export interface GCPubSubClientOptions {
   autoDeleteSubscriptionOnShutdown?: boolean;
   clientIdFilter?: boolean;
   appendClientIdToSubscription?: boolean;
+  parser?: IGCPubSubParser;
 }
 
 export interface GCPubSubServerOptions {
@@ -36,4 +38,5 @@ export interface GCPubSubServerOptions {
   createSubscriptionOptions?: CreateSubscriptionOptions;
   autoResume?: boolean;
   ackAfterResponse?: boolean;
+  parser?: IGCPubSubParser;
 }

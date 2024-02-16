@@ -5,10 +5,10 @@ import { SubscriberOptions } from '@google-cloud/pubsub/build/src/subscriber';
 import { IGCPubSubParser } from './gc-pubsub.parser';
 
 export interface GCPubSubClientOptions {
-  client?: ClientConfig;
-  topic?: string;
-  replyTopic?: string;
-  replySubscription?: string;
+  client: ClientConfig;
+  topic: string;
+  replyTopic: string;
+  replySubscription: string;
   noAck?: boolean;
   init?: boolean;
   checkExistence?: boolean;
@@ -25,9 +25,9 @@ export interface GCPubSubClientOptions {
 }
 
 export interface GCPubSubServerOptions {
-  client?: ClientConfig;
-  topic?: string;
-  subscription?: string;
+  client: ClientConfig;
+  topic: string;
+  subscription: string;
   noAck?: boolean;
   init?: boolean;
   checkExistence?: boolean;

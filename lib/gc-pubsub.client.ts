@@ -102,7 +102,9 @@ export class GCPubSubClient extends ClientProxy {
 
     this.topic = this.client.topic(this.topicName, this.publisherConfig);
 
-    if (this.checkExistence) {
+    if (this.init) {
+      await this.createIfNotExists(this.topic.create.bind(this.topic));
+    } else if (this.checkExistence) {
       const [topicExists] = await this.topic.exists();
 
       if (!topicExists) {

@@ -214,10 +214,17 @@ export class GCPubSubClient extends ClientProxy {
       return;
     }
 
-    const serializedPacket = this.serializer.serialize({
-      ...packet,
-      pattern,
-    }) as GCPubSubMessage;
+    const serializedPacket = (await this.serializer.serialize(
+      {
+        ...packet,
+        pattern,
+      },
+      {
+        message: {
+          ...packet.data,
+        },
+      },
+    )) as GCPubSubMessage;
 
     const attributes = {
       _replyTo: this.replyTopicName,
@@ -289,9 +296,10 @@ export class GCPubSubClient extends ClientProxy {
   }): Promise<boolean> {
     const rawMessage = await this.parser.parse(message);
 
-    const { err, response, isDisposed, id } = this.deserializer.deserialize(
-      rawMessage,
-    ) as IncomingResponse;
+    const { err, response, isDisposed, id } =
+      (await this.deserializer.deserialize(rawMessage, {
+        message,
+      })) as IncomingResponse;
     const correlationId = message.attributes._id || id;
 
     const callback = this.routingMap.get(correlationId);

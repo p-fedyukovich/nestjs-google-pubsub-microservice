@@ -39,6 +39,7 @@ import {
 import { GCPubSubContext } from './gc-pubsub.context';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
 import { GCPubSubParser, IGCPubSubParser } from './gc-pubsub.parser';
+import { GCPubSubResponseSerializer } from './gc-message.serializer';
 
 export class GCPubSubServer extends Server implements CustomTransportStrategy {
   protected logger = new Logger(GCPubSubServer.name);
@@ -162,11 +163,14 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     const rawMessage = await this.parser.parse(message);
     const now = new Date();
 
-    const packet = this.deserializer.deserialize({
-      data: rawMessage,
-      id: attributes._id,
-      pattern: attributes._pattern,
-    }) as IncomingRequest;
+    const packet = (await this.deserializer.deserialize(
+      {
+        data: rawMessage,
+        id: attributes._id,
+        pattern: attributes._pattern,
+      },
+      { message },
+    )) as IncomingRequest;
 
     const pattern = isString(packet.pattern)
       ? packet.pattern
@@ -242,16 +246,34 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
   ): Promise<void> {
     Object.assign(message, { id });
 
-    const outgoingResponse = this.serializer.serialize(
-      message as unknown as OutgoingResponse,
+    const outgoingResponse = await this.serializer.serialize(
+      message as OutgoingResponse,
+      {
+        message: {
+          data: message,
+          attributes,
+        },
+      },
     );
 
     this.replyTopics.add(replyTo);
 
     await this.client.topic(replyTo, this.publisherConfig).publishMessage({
-      json: outgoingResponse,
-      attributes: { id, ...attributes },
+      data: outgoingResponse.data,
+      attributes: {
+        id,
+        ...attributes,
+        ...(outgoingResponse.isDisposed ? { isDisposed: '1' } : {}),
+        ...(outgoingResponse.err
+          ? { err: JSON.stringify(outgoingResponse.err) }
+          : {}),
+        ...(outgoingResponse.status ? { status: outgoingResponse } : {}),
+      },
     });
+  }
+
+  protected initializeSerializer(options: GCPubSubServerOptions): void {
+    this.serializer = options?.serializer ?? new GCPubSubResponseSerializer();
   }
 
   public async createIfNotExists(create: () => Promise<any>) {

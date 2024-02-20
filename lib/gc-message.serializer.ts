@@ -1,4 +1,8 @@
-import { ReadPacket, Serializer } from '@nestjs/microservices';
+import {
+  OutgoingResponse,
+  ReadPacket,
+  Serializer,
+} from '@nestjs/microservices';
 import { GCPubSubMessage, GCPubSubMessageBuilder } from './gc-message.builder';
 
 export class GCPubSubMessageSerializer
@@ -12,6 +16,19 @@ export class GCPubSubMessageSerializer
     } else {
       message = new GCPubSubMessageBuilder(packet.data).build();
     }
+
+    return {
+      ...message,
+      data: Buffer.from(JSON.stringify(message.data)),
+    };
+  }
+}
+
+export class GCPubSubResponseSerializer
+  implements Serializer<OutgoingResponse, GCPubSubMessage>
+{
+  serialize(value: OutgoingResponse): GCPubSubMessage<any, any> {
+    const message = new GCPubSubMessageBuilder(value).build();
 
     return {
       ...message,

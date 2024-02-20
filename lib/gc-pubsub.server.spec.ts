@@ -206,11 +206,13 @@ describe('GCPubSubServer', () => {
 
       expect(
         topicMock.publishMessage.calledWith({
-          json: {
-            id: messageOptions.attributes._id,
-            status: 'error',
-            err: NO_MESSAGE_HANDLER,
-          },
+          data: Buffer.from(
+            JSON.stringify({
+              id: messageOptions.attributes._id,
+              status: 'error',
+              err: NO_MESSAGE_HANDLER,
+            }),
+          ),
           attributes: {
             id: messageOptions.attributes._id,
             ...messageOptions.attributes,
@@ -246,11 +248,13 @@ describe('GCPubSubServer', () => {
 
       expect(
         topicMock.publishMessage.calledWith({
-          json: {
-            id: timeoutMessageOptions.attributes._id,
-            status: 'error',
-            err: 'Message Timeout',
-          },
+          data: Buffer.from(
+            JSON.stringify({
+              id: timeoutMessageOptions.attributes._id,
+              status: 'error',
+              err: 'Message Timeout',
+            }),
+          ),
           attributes: {
             id: timeoutMessageOptions.attributes._id,
             ...timeoutMessageOptions.attributes,
@@ -298,7 +302,7 @@ describe('GCPubSubServer', () => {
       await server.sendMessage(message, replyTo, correlationId);
       expect(
         topicMock.publishMessage.calledWith({
-          json: { ...message, id: correlationId },
+          data: Buffer.from(JSON.stringify({ ...message, id: correlationId })),
           attributes: {
             id: correlationId,
           },

@@ -1,6 +1,6 @@
 {
   "name": "@tawk.to/nestjs-google-pubsub-microservice",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "NestJS Google Cloud Pub/Sub Microservice Transport",
   "author": "tawk.to",
   "license": "MIT",

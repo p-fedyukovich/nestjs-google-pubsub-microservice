@@ -267,7 +267,7 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
         ...(outgoingResponse.err
           ? { err: JSON.stringify(outgoingResponse.err) }
           : {}),
-        ...(outgoingResponse.status ? { status: outgoingResponse } : {}),
+        ...(outgoingResponse.status ? { status: outgoingResponse.status } : {}),
       },
     });
   }

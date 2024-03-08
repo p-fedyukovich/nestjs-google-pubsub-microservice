@@ -245,42 +245,53 @@ export class GCPubSubClient extends ClientProxy {
   ) {
     try {
       const packet = this.assignPacketId(partialPacket);
-
-      const serializedPacket = this.serializer.serialize(
-        packet,
-      ) as GCPubSubMessage;
-      const attributes = {
-        _replyTo: this.replyTopicName,
-        _pattern: JSON.stringify(this.getRequestPattern(packet.pattern)),
-        _id: packet.id,
-        _clientId: this.clientId,
-        ...(serializedPacket.attributes && serializedPacket.attributes),
-      };
       this.routingMap.set(packet.id, callback);
-      if (this.topic) {
-        this.topic
-          .publishMessage({
-            data: serializedPacket.data,
-            orderingKey: serializedPacket.orderingKey,
-            attributes: attributes,
-          })
-          .catch((err) => {
-            if (this.autoResume && serializedPacket.orderingKey) {
-              this.topic.resumePublishing(serializedPacket.orderingKey);
-            }
-            callback({ err });
-          });
-      } else {
-        callback({ err: new Error('Topic is not created') });
-      }
 
-      if (serializedPacket.attributes._timeout) {
-        setTimeout(() => {
-          callback({ err: new RequestTimeoutException('Message Timeout') });
-        }, Number(serializedPacket.attributes._timeout));
-      }
+      const cleanup = () => this.routingMap.delete(packet.id);
+      const errorCallback = (err: unknown) => {
+        cleanup();
+        callback({ err });
+      };
 
-      return () => this.routingMap.delete(packet.id);
+      Promise.resolve(
+        this.serializer.serialize(packet, {
+          message: {
+            ...packet.data,
+          },
+        }),
+      ).then((serializedPacket: GCPubSubMessage) => {
+        const attributes = {
+          _replyTo: this.replyTopicName,
+          _pattern: JSON.stringify(this.getRequestPattern(packet.pattern)),
+          _id: packet.id,
+          _clientId: this.clientId,
+          ...(serializedPacket.attributes && serializedPacket.attributes),
+        };
+        if (this.topic) {
+          this.topic
+            .publishMessage({
+              data: serializedPacket.data,
+              orderingKey: serializedPacket.orderingKey,
+              attributes: attributes,
+            })
+            .catch((err) => {
+              if (this.autoResume && serializedPacket.orderingKey) {
+                this.topic.resumePublishing(serializedPacket.orderingKey);
+              }
+              callback({ err });
+            });
+        } else {
+          errorCallback(new Error('Topic is not created'));
+        }
+
+        if (serializedPacket.attributes._timeout) {
+          setTimeout(() => {
+            errorCallback(new RequestTimeoutException('Message Timeout'));
+          }, Number(serializedPacket.attributes._timeout));
+        }
+      });
+
+      return cleanup;
     } catch (err) {
       callback({ err });
     }

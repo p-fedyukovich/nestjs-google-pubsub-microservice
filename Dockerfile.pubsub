@@ -1,0 +1,4 @@
+FROM gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+
+CMD exec gcloud beta emulators pubsub start --project=${PROJECT_ID} --host-port=${EMULATOR_HOST}
+STOPSIGNAL SIGINT

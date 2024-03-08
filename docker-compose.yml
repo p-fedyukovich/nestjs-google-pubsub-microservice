@@ -1,7 +1,13 @@
-version: '3'
+version: '2'
 services:
-  pubsub:
-    image: messagebird/gcloud-pubsub-emulator:latest
-    ports:
-      - '8681:8681'
-    restart: always
+    google-pubsub-emulator:
+        build:
+            dockerfile: Dockerfile.pubsub
+        environment:
+            - PROJECT_ID=test-project-id
+            # 0.0.0.0 needed since by default it listen to [::1]:8085 which
+            # will make any incomming ipv4 and non local ipv6 request fails
+            # including docker proxy
+            - EMULATOR_HOST=0.0.0.0:8085
+        ports:
+            - 8085:8085

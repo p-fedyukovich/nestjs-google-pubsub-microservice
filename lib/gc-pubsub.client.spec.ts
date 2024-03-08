@@ -5,6 +5,7 @@ import { GCPubSubClient } from './gc-pubsub.client';
 import { GCPubSubClientOptions } from './gc-pubsub.interface';
 import { GCPubSubMessageBuilder } from './gc-message.builder';
 import { CreateSubscriptionOptions } from '@google-cloud/pubsub';
+import { RequestTimeoutException } from '@nestjs/common';
 
 describe('GCPubSubClient', () => {
   let client: GCPubSubClient;
@@ -336,22 +337,24 @@ describe('GCPubSubClient', () => {
         autoResume: true,
       });
       (client as any).topic = topicMock;
-      topicMock.publishMessage = sinon.stub().resolves();
 
       sinon.spy(client['serializer'], 'serialize');
     });
 
     const pattern = 'test';
     const msg = { pattern, data: 'data' };
-    it('should send message to a proper topic', () => {
+    it('should send message to a proper topic', (done) => {
+      topicMock.publishMessage = sinon.stub().callsFake(async () => {
+        const message = topicMock.publishMessage.getCall(0).args[0];
+        expect(topicMock.publishMessage.called).to.be.true;
+        expect(message.data).to.be.eql(
+          (client['serializer'].serialize as sinon.SinonSpy).getCall(0)
+            .returnValue.data,
+        );
+        done();
+      });
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       client['publish'](msg, () => {});
-      const message = topicMock.publishMessage.getCall(0).args[0];
-      expect(topicMock.publishMessage.called).to.be.true;
-      expect(message.data).to.be.eql(
-        (client['serializer'].serialize as sinon.SinonSpy).getCall(0)
-          .returnValue.data,
-      );
     });
 
     it('should remove listener from routing map on dispose', () => {
@@ -382,21 +385,24 @@ describe('GCPubSubClient', () => {
       });
     });
 
-    it('should send message to a proper topic', () => {
+    it('should send message to a proper topic', (done) => {
+      topicMock.publishMessage = sinon.stub().callsFake(async () => {
+        const message = topicMock.publishMessage.getCall(0).args[0];
+        expect(topicMock.publishMessage.called).to.be.true;
+        expect(message.data).to.be.eql(
+          (client['serializer'].serialize as sinon.SinonSpy).getCall(0)
+            .returnValue.data,
+        );
+        expect(message.attributes._pattern).to.be.eql(JSON.stringify(pattern));
+        expect(message.attributes._id).to.be.not.empty;
+        done();
+      });
+
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       client['publish'](msg, (): any => {});
-
-      expect(topicMock.publishMessage.called).to.be.true;
-      const message = topicMock.publishMessage.getCall(0).args[0];
-      expect(message.data).to.be.eql(
-        (client['serializer'].serialize as sinon.SinonSpy).getCall(0)
-          .returnValue.data,
-      );
-      expect(message.attributes._pattern).to.be.eql(JSON.stringify(pattern));
-      expect(message.attributes._id).to.be.not.empty;
     });
 
-    it('should setTimeout to call callback with timeout error when timeout is provided', () => {
+    it('should setTimeout to call callback with timeout error when timeout is provided', (done) => {
       // TODO: implement test
       const message = {
         data: new GCPubSubMessageBuilder('data')
@@ -406,9 +412,13 @@ describe('GCPubSubClient', () => {
         pattern: 'test',
       };
 
-      client['publish'](message, callback);
-      clock.tick(510);
-      expect(callback.calledOnce).to.be.true;
+      Promise.resolve(client['publish'](message, callback)).then(() => {
+        clock.tick(510);
+        expect(callback.called).to.be.true;
+        const error = callback.getCall(0).args[0].err;
+        expect(error).to.be.instanceof(RequestTimeoutException);
+        done();
+      });
     });
   });
 

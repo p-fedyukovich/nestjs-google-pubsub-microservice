@@ -18,9 +18,11 @@ export interface GCPubSubClientOptions {
   deserializer?: Deserializer;
   createSubscriptionOptions?: CreateSubscriptionOptions;
   autoResume?: boolean;
-  autoDeleteSubscriptionOnShutdown?: boolean;
   clientIdFilter?: boolean;
   appendClientIdToSubscription?: boolean;
+  autoDeleteSubscriptionOnShutdown?: boolean;
+  appendClientIdToReplyTopic?: boolean;
+  autoDeleteReplyTopicOnShutdown?: boolean;
   parser?: IGCPubSubParser;
 }
 

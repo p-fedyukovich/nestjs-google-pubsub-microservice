@@ -14,11 +14,6 @@ import {
   Server,
 } from '@nestjs/microservices';
 import { Logger } from '@nestjs/common';
-import {
-  ERROR_EVENT,
-  MESSAGE_EVENT,
-  NO_MESSAGE_HANDLER,
-} from '@nestjs/microservices/constants';
 import { isString, isUndefined } from '@nestjs/common/utils/shared.utils';
 
 import { GCPubSubOptions } from './gc-pubsub.interface';
@@ -35,8 +30,13 @@ import {
 } from './gc-pubsub.constants';
 import { GCPubSubContext } from './gc-pubsub.context';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
+import { NO_MESSAGE_HANDLER } from '@nestjs/microservices/constants';
+import { PubSubEvents, PubSubStatus } from './gc-pubsub.events';
 
-export class GCPubSubServer extends Server implements CustomTransportStrategy {
+export class GCPubSubServer
+  extends Server<PubSubEvents, PubSubStatus>
+  implements CustomTransportStrategy
+{
   protected logger = new Logger(GCPubSubServer.name);
 
   protected readonly clientConfig: ClientConfig;
@@ -118,13 +118,13 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
     }
 
     this.subscription
-      .on(MESSAGE_EVENT, async (message: Message) => {
+      .on('message', async (message: Message) => {
         await this.handleMessage(message);
         if (this.noAck) {
           message.ack();
         }
       })
-      .on(ERROR_EVENT, (err: any) => this.logger.error(err));
+      .on('error', (err: any) => this.logger.error(err));
 
     callback();
   }
@@ -229,5 +229,28 @@ export class GCPubSubServer extends Server implements CustomTransportStrategy {
 
   public createClient() {
     return new PubSub(this.clientConfig);
+  }
+
+  private readonly eventListeners: Map<
+    keyof PubSubEvents,
+    Array<(...args: any[]) => any>
+  > = new Map();
+
+  public on<
+    EventKey extends keyof PubSubEvents = keyof PubSubEvents,
+    EventCallback extends PubSubEvents[EventKey] = PubSubEvents[EventKey],
+  >(event: EventKey, callback: EventCallback): this {
+    if (!this.eventListeners.has(event)) {
+      this.eventListeners.set(event, []);
+    }
+    this.eventListeners.get(event)!.push(callback);
+    return this;
+  }
+
+  public unwrap<T = any>(): T {
+    if (!this.client) {
+      throw new Error('Client is not initialized.');
+    }
+    return this.client as unknown as T;
   }
 }

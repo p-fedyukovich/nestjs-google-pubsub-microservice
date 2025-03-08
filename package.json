@@ -1,6 +1,6 @@
 {
   "name": "nestjs-google-pubsub-microservice",
-  "version": "10.0.2",
+  "version": "10.1.1",
   "description": "NestJS Google Cloud Pub/Sub Microservice Transport",
   "author": "Pavel Fediukovich",
   "license": "MIT",

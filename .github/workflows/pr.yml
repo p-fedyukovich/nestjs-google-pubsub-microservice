@@ -1,0 +1,69 @@
+name: Pull Request
+
+on: [pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build --if-present
+
+      - name: Run Unit Tests
+        run: npm test
+
+      - name: Upload Code Coverage
+        uses: codecov/codecov-action@v3.1.0
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: .
+
+  integration_tests:
+    runs-on: ubuntu-latest
+    needs: build
+    env:
+      PUBSUB_EMULATOR_HOST: localhost:8681
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: .
+
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Docker Compose
+        run: |
+          curl -L "https://github.com/docker/compose/releases/download/1.19.0/docker-compose-$(uname -s)-$(uname -m)" -o docker-compose
+          chmod +x docker-compose
+          sudo mv docker-compose /usr/local/bin/docker-compose
+
+      - name: Start Docker Compose services
+        run: |
+          docker-compose up -d
+          sleep 10
+
+      - name: List Docker Containers
+        run: docker ps
+
+      - name: Run End-to-End Tests
+        run: npm run test:e2e

@@ -1,12 +1,9 @@
-import { Message } from '@google-cloud/pubsub';
+import { StatusError } from '@google-cloud/pubsub';
 
-export const enum PubSubStatus {
-  CONNECTED = 'connected',
-  DISCONNECTED = 'disconnected',
-  RECONNECTING = 'reconnecting',
-}
+type VoidCallback = () => void;
+type OnErrorCallback = (error: StatusError) => void;
 
 export type PubSubEvents = {
-  message: (message: Message) => void;
-  error: (error: Error) => void;
+  error: OnErrorCallback;
+  close: VoidCallback;
 };

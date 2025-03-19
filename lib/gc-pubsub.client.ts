@@ -28,9 +28,9 @@ import {
 } from './gc-pubsub.constants';
 import { GCPubSubOptions } from './gc-pubsub.interface';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
-import { PubSubEvents, PubSubStatus } from './gc-pubsub.events';
+import { PubSubEvents } from './gc-pubsub.events';
 
-export class GCPubSubClient extends ClientProxy<PubSubEvents, PubSubStatus> {
+export class GCPubSubClient extends ClientProxy<PubSubEvents> {
   protected readonly logger = new Logger(GCPubSubClient.name);
 
   protected readonly topicName: string;
@@ -280,10 +280,10 @@ export class GCPubSubClient extends ClientProxy<PubSubEvents, PubSubStatus> {
     }
   }
 
-  public unwrap<T = any>(): T {
+  public unwrap<T>(): T {
     if (!this.client) {
       throw new Error('Client is not initialized.');
     }
-    return this.client as unknown as T;
+    return this.client as T;
   }
 }

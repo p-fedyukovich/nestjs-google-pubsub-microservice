@@ -31,10 +31,10 @@ import {
 import { GCPubSubContext } from './gc-pubsub.context';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
 import { NO_MESSAGE_HANDLER } from '@nestjs/microservices/constants';
-import { PubSubEvents, PubSubStatus } from './gc-pubsub.events';
+import { PubSubEvents } from './gc-pubsub.events';
 
 export class GCPubSubServer
-  extends Server<PubSubEvents, PubSubStatus>
+  extends Server<PubSubEvents>
   implements CustomTransportStrategy
 {
   protected logger = new Logger(GCPubSubServer.name);
@@ -49,6 +49,10 @@ export class GCPubSubServer
   protected readonly init: boolean;
   protected readonly checkExistence: boolean;
   protected readonly scopedEnvKey: string | null;
+  protected pendingEventListeners: Array<{
+    event: keyof PubSubEvents;
+    callback: PubSubEvents[keyof PubSubEvents];
+  }> = [];
 
   protected client: PubSub | null = null;
   protected subscription: Subscription | null = null;
@@ -117,6 +121,11 @@ export class GCPubSubServer
       }
     }
 
+    this.pendingEventListeners.forEach(({ event, callback }) => {
+      this.subscription.on(event, callback as any);
+    });
+    this.pendingEventListeners = [];
+
     this.subscription
       .on('message', async (message: Message) => {
         await this.handleMessage(message);
@@ -141,6 +150,7 @@ export class GCPubSubServer
     this.replyTopics.clear();
 
     await closePubSub(this.client);
+    this.pendingEventListeners = [];
   }
 
   public async handleMessage(message: Message) {
@@ -231,26 +241,21 @@ export class GCPubSubServer
     return new PubSub(this.clientConfig);
   }
 
-  private readonly eventListeners: Map<
-    keyof PubSubEvents,
-    Array<(...args: any[]) => any>
-  > = new Map();
-
   public on<
     EventKey extends keyof PubSubEvents = keyof PubSubEvents,
     EventCallback extends PubSubEvents[EventKey] = PubSubEvents[EventKey],
-  >(event: EventKey, callback: EventCallback): this {
-    if (!this.eventListeners.has(event)) {
-      this.eventListeners.set(event, []);
+  >(event: EventKey, callback: EventCallback) {
+    if (this.subscription) {
+      this.subscription.on(event, callback as any);
+    } else {
+      this.pendingEventListeners.push({ event, callback });
     }
-    this.eventListeners.get(event)!.push(callback);
-    return this;
   }
 
-  public unwrap<T = any>(): T {
+  public unwrap<T>(): T {
     if (!this.client) {
       throw new Error('Client is not initialized.');
     }
-    return this.client as unknown as T;
+    return this.client as T;
   }
 }

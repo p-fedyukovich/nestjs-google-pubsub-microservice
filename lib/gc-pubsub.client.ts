@@ -28,9 +28,9 @@ import {
 } from './gc-pubsub.constants';
 import { GCPubSubOptions } from './gc-pubsub.interface';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
-import { PubSubEvents } from './gc-pubsub.events';
+import { GCPubSubEvents } from './gc-pubsub.events';
 
-export class GCPubSubClient extends ClientProxy<PubSubEvents> {
+export class GCPubSubClient extends ClientProxy<GCPubSubEvents> {
   protected readonly logger = new Logger(GCPubSubClient.name);
 
   protected readonly topicName: string;

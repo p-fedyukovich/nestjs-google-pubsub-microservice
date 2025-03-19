@@ -31,10 +31,10 @@ import {
 import { GCPubSubContext } from './gc-pubsub.context';
 import { closePubSub, closeSubscription, flushTopic } from './gc-pubsub.utils';
 import { NO_MESSAGE_HANDLER } from '@nestjs/microservices/constants';
-import { PubSubEvents } from './gc-pubsub.events';
+import { GCPubSubEvents } from './gc-pubsub.events';
 
 export class GCPubSubServer
-  extends Server<PubSubEvents>
+  extends Server<GCPubSubEvents>
   implements CustomTransportStrategy
 {
   protected logger = new Logger(GCPubSubServer.name);
@@ -50,8 +50,8 @@ export class GCPubSubServer
   protected readonly checkExistence: boolean;
   protected readonly scopedEnvKey: string | null;
   protected pendingEventListeners: Array<{
-    event: keyof PubSubEvents;
-    callback: PubSubEvents[keyof PubSubEvents];
+    event: keyof GCPubSubEvents;
+    callback: GCPubSubEvents[keyof GCPubSubEvents];
   }> = [];
 
   protected client: PubSub | null = null;
@@ -242,8 +242,8 @@ export class GCPubSubServer
   }
 
   public on<
-    EventKey extends keyof PubSubEvents = keyof PubSubEvents,
-    EventCallback extends PubSubEvents[EventKey] = PubSubEvents[EventKey],
+    EventKey extends keyof GCPubSubEvents = keyof GCPubSubEvents,
+    EventCallback extends GCPubSubEvents[EventKey] = GCPubSubEvents[EventKey],
   >(event: EventKey, callback: EventCallback) {
     if (this.subscription) {
       this.subscription.on(event, callback as any);

@@ -183,6 +183,23 @@ describe('GCPubSubServer', () => {
       });
       expect(handler.calledOnce).to.be.true;
     });
+
+    it('should return undefined when data is not in JSON format', async () => {
+      const result = await server.handleMessage({
+        ackId: 'id',
+        // @ts-ignore
+        publishTime: new Date(),
+        attributes: {},
+        id: 'id',
+        received: 0,
+        deliveryAttempt: 1,
+        ack: () => {},
+        modAck: () => {},
+        nack: () => {},
+        data: Buffer.from('text'),
+      });
+      expect(result).to.be.undefined;
+    });
   });
 
   describe('sendMessage', () => {

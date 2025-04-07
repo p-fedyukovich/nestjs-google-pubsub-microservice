@@ -155,7 +155,15 @@ export class GCPubSubServer
 
   public async handleMessage(message: Message) {
     const { data, attributes } = message;
-    const rawMessage = JSON.parse(data.toString());
+    let rawMessage;
+    try {
+      rawMessage = JSON.parse(data.toString());
+    } catch (error: any) {
+      this.logger.error(
+        `Unsupported JSON message data format for message '${message.id}'`,
+      );
+      return;
+    }
 
     let packet;
     if (attributes.pattern) {

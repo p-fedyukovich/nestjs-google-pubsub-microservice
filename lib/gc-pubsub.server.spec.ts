@@ -5,6 +5,8 @@ import { NO_MESSAGE_HANDLER } from '@nestjs/microservices/constants';
 import { BaseRpcContext } from '@nestjs/microservices/ctx-host/base-rpc.context';
 import { ALREADY_EXISTS } from './gc-pubsub.constants';
 import { GCPubSubOptions } from './gc-pubsub.interface';
+import { Message } from '@google-cloud/pubsub';
+import { Logger } from '@nestjs/common';
 
 describe('GCPubSubServer', () => {
   let server: GCPubSubServer;
@@ -15,6 +17,33 @@ describe('GCPubSubServer', () => {
   let sandbox: sinon.SinonSandbox;
   const objectToMap = (obj: any) =>
     new Map(Object.keys(obj).map((key) => [key, obj[key]]) as any);
+
+  const createMockMessage = (data: any, attributes: any = {}): Message => ({
+    ackId: 'id',
+    // @ts-expect-error - Mock message for testing
+    publishTime: new Date(),
+    attributes,
+    id: 'id',
+    received: 0,
+    deliveryAttempt: 1,
+    ack: () => {},
+    modAck: () => {},
+    nack: () => {},
+    data: Buffer.from(typeof data === 'string' ? data : JSON.stringify(data)),
+  });
+
+  const simulateMessageEvent = async (
+    server: GCPubSubServer,
+    message: Message,
+  ) => {
+    const onCall = subscriptionMock.on
+      .getCalls()
+      .find((call: sinon.SinonSpyCall) => call.args[0] === 'message');
+
+    expect(onCall, 'No message handler registered').to.exist;
+    const messageHandler = onCall.args[1];
+    await messageHandler(message);
+  };
 
   afterEach(() => {
     sandbox.restore();
@@ -202,6 +231,70 @@ describe('GCPubSubServer', () => {
     });
   });
 
+  describe('message acknowledgment behavior', () => {
+    const msg = {
+      pattern: 'test',
+      data: 'tests',
+      id: '3',
+    };
+
+    it('should auto acknowledge message when noAck is true and message handling succeeded', async () => {
+      server = getInstance({ noAck: true });
+      await server.listen(() => {});
+
+      const message = createMockMessage(msg);
+      const ackSpy = sinon.spy(message, 'ack');
+
+      await simulateMessageEvent(server, message);
+
+      expect(ackSpy.calledOnce).to.be.true;
+    });
+
+    it('should auto negative acknowledge message when noAck is true and message handling failed', async () => {
+      server = getInstance({ noAck: true });
+      await server.listen(() => {});
+
+      const message = createMockMessage(msg);
+      const nackSpy = sinon.spy(message, 'nack');
+
+      (server as any).messageHandlers = objectToMap({
+        [msg.pattern]: sinon.stub().rejects(new Error('Handler failed')),
+      });
+
+      await simulateMessageEvent(server, message);
+
+      expect(nackSpy.calledOnce).to.be.true;
+    });
+
+    it('should not auto acknowledge message when noAck is false and message handling succeeded', async () => {
+      server = getInstance({ noAck: false });
+      await server.listen(() => {});
+
+      const message = createMockMessage(msg);
+      const ackSpy = sinon.spy(message, 'ack');
+
+      await simulateMessageEvent(server, message);
+
+      expect(ackSpy.called).to.be.false;
+    });
+
+    it('should not auto negative acknowledge message when noAck is false and message handling failed', async () => {
+      server = getInstance({ noAck: false });
+      await server.listen(() => {});
+
+      const message = createMockMessage(msg);
+      const nackSpy = sinon.spy(message, 'nack');
+
+      (server as any).messageHandlers = objectToMap({
+        [msg.pattern]: sinon.stub().rejects(new Error('Handler failed')),
+      });
+
+      await simulateMessageEvent(server, message);
+
+      expect(nackSpy.called).to.be.false;
+    });
+  });
+
   describe('sendMessage', () => {
     beforeEach(async () => {
       server = getInstance({});
@@ -285,6 +378,11 @@ describe('GCPubSubServer', () => {
     const server = new GCPubSubServer(options);
 
     sandbox = sinon.createSandbox();
+
+    const logger = new Logger();
+    sinon.stub(logger, 'error');
+
+    server['logger'] = logger;
 
     subscriptionMock = {
       create: sandbox.stub().resolves(),

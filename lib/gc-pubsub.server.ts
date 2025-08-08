@@ -128,9 +128,17 @@ export class GCPubSubServer
 
     this.subscription
       .on('message', async (message: Message) => {
-        await this.handleMessage(message);
-        if (this.noAck) {
-          message.ack();
+        try {
+          await this.handleMessage(message);
+          if (this.noAck) {
+            message.ack();
+          }
+        } catch (err: any) {
+          if (this.noAck) {
+            message.nack();
+          }
+
+          this.logger.error(err);
         }
       })
       .on('error', (err: any) => this.logger.error(err));

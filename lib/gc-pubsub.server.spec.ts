@@ -131,6 +131,40 @@ describe('GCPubSubServer', () => {
         expect(subscriptionMock.on.callCount).to.eq(2);
       });
     });
+
+    describe('when subscriptionFilter is provided', () => {
+      const filter = 'attributes.type = "order"';
+
+      beforeEach(async () => {
+        server = getInstance({ subscriptionFilter: filter });
+        await server.listen(() => {});
+      });
+
+      it('should call "pubsub.createSubscription" with the filter', () => {
+        expect(pubsub.createSubscription.called).to.be.true;
+        const args = pubsub.createSubscription.getCall(0).args;
+        expect(args[2]).to.deep.include({ filter });
+      });
+
+      it('should not call "subscription.create"', () => {
+        expect(subscriptionMock.create.called).to.be.false;
+      });
+    });
+
+    describe('when subscriptionFilter is not provided', () => {
+      beforeEach(async () => {
+        server = getInstance({});
+        await server.listen(() => {});
+      });
+
+      it('should call "subscription.create" without filter', () => {
+        expect(subscriptionMock.create.called).to.be.true;
+      });
+
+      it('should not call "pubsub.createSubscription"', () => {
+        expect(pubsub.createSubscription.called).to.be.false;
+      });
+    });
   });
 
   describe('close', () => {
@@ -402,6 +436,7 @@ describe('GCPubSubServer', () => {
     pubsub = {
       topic: sandbox.stub().returns(topicMock),
       close: sandbox.stub().callsFake((callback) => callback()),
+      createSubscription: sandbox.stub().resolves([subscriptionMock]),
     };
 
     createClient = sandbox.stub(server, 'createClient').returns(pubsub);

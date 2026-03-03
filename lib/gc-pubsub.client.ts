@@ -48,6 +48,7 @@ export class GCPubSubClient extends ClientProxy<GCPubSubEvents> {
   protected init: boolean;
   protected readonly scopedEnvKey: string | null;
   protected readonly checkExistence: boolean;
+  protected readonly replySubscriptionFilter: string | undefined;
 
   constructor(protected readonly options: GCPubSubOptions) {
     super();
@@ -79,6 +80,8 @@ export class GCPubSubClient extends ClientProxy<GCPubSubEvents> {
       this.options.useAttributes ?? GC_PUBSUB_DEFAULT_USE_ATTRIBUTES;
     this.checkExistence =
       this.options.checkExistence ?? GC_PUBSUB_DEFAULT_CHECK_EXISTENCE;
+
+    this.replySubscriptionFilter = this.options.replySubscriptionFilter;
 
     this.initializeSerializer(options);
     this.initializeDeserializer(options);
@@ -135,7 +138,14 @@ export class GCPubSubClient extends ClientProxy<GCPubSubEvents> {
 
       if (this.init) {
         await this.createIfNotExists(
-          this.replySubscription.create.bind(this.replySubscription),
+          this.replySubscriptionFilter
+            ? () =>
+                this.client!.createSubscription(
+                  this.replyTopicName!,
+                  this.replySubscriptionName!,
+                  { filter: this.replySubscriptionFilter },
+                )
+            : this.replySubscription.create.bind(this.replySubscription),
         );
       } else if (this.checkExistence) {
         const [exists] = await this.replySubscription.exists();

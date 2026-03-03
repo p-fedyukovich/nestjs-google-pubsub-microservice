@@ -225,6 +225,55 @@ describe('GCPubSubClient', () => {
         expect(subscriptionMock.on.callCount).to.eq(0);
       });
     });
+
+    describe('when replySubscriptionFilter is provided', () => {
+      const filter = 'attributes.type = "reply"';
+
+      beforeEach(async () => {
+        client = getInstance({
+          replyTopic: 'replyTopic',
+          replySubscription: 'replySubscription',
+          replySubscriptionFilter: filter,
+        });
+
+        try {
+          client['client'] = null;
+          await client.connect();
+        } catch {}
+      });
+
+      it('should call "pubsub.createSubscription" with the filter', () => {
+        expect(pubsub.createSubscription.called).to.be.true;
+        const args = pubsub.createSubscription.getCall(0).args;
+        expect(args[2]).to.deep.include({ filter });
+      });
+
+      it('should not call "subscription.create"', () => {
+        expect(subscriptionMock.create.called).to.be.false;
+      });
+    });
+
+    describe('when replySubscriptionFilter is not provided', () => {
+      beforeEach(async () => {
+        client = getInstance({
+          replyTopic: 'replyTopic',
+          replySubscription: 'replySubscription',
+        });
+
+        try {
+          client['client'] = null;
+          await client.connect();
+        } catch {}
+      });
+
+      it('should call "subscription.create" without filter', () => {
+        expect(subscriptionMock.create.called).to.be.true;
+      });
+
+      it('should not call "pubsub.createSubscription"', () => {
+        expect(pubsub.createSubscription.called).to.be.false;
+      });
+    });
   });
 
   describe('publish', () => {
@@ -487,6 +536,7 @@ describe('GCPubSubClient', () => {
     pubsub = {
       topic: sandbox.stub().callsFake(() => topicMock),
       close: sandbox.stub().callsFake((callback) => callback()),
+      createSubscription: sandbox.stub().resolves([subscriptionMock]),
     };
 
     createClient = sandbox.stub(client, 'createClient').callsFake(() => pubsub);

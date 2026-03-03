@@ -11,6 +11,8 @@ export interface GCPubSubOptions {
   replyTopic?: string;
   subscription?: string;
   replySubscription?: string;
+  subscriptionFilter?: string;
+  replySubscriptionFilter?: string;
   noAck?: boolean;
   init?: boolean;
   useAttributes?: boolean;
